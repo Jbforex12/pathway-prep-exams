@@ -1,0 +1,27 @@
+{
+  "name": "pathway-prep-exams",
+  "version": "1.0.0",
+  "description": "Pathway Prep CBT exam platform",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/ensure-built.js && node server.js",
+    "dev": "node server.js",
+    "exam:install": "npm install --prefix exam-portal-design",
+    "exam:build": "npm run build --prefix exam-portal-design",
+    "template:build": "node scripts/build-import-template.js",
+    "postinstall": "npm run template:build && npm run exam:install"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "resend": "^4.0.0",
+    "xlsx": "^0.18.5"
+  }
+}

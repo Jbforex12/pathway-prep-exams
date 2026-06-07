@@ -1,0 +1,7 @@
+node_modules/
+exam-portal-design/node_modules/
+exam-portal-design/out/
+exam-portal-design/.next/
+data/
+.env
+*.db

@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --font-heading: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --color-background: #ffffff;
+  --color-foreground: #0b1220;
+  --color-card: #ffffff;
+  --color-card-foreground: #0b1220;
+  --color-primary: #1e40af;
+  --color-primary-foreground: #ffffff;
+  --color-muted: #f8fafc;
+  --color-muted-foreground: #51607a;
+  --color-border: #e2e8f0;
+  --color-destructive: #b91c1c;
+  --color-success: #047857;
+  --radius-lg: 0.5rem;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0b1220;
+  --card: #ffffff;
+  --primary: #1e40af;
+  --primary-foreground: #ffffff;
+  --muted: #f8fafc;
+  --muted-foreground: #51607a;
+  --border: #e2e8f0;
+  --destructive: #b91c1c;
+  --success: #047857;
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  body { background: var(--background); color: var(--foreground); }
+}
+
+@layer utilities {
+  .safe-px {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .safe-pb { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .safe-pt { padding-top: max(1rem, env(safe-area-inset-top)); }
+  .bg-background { background-color: var(--background); }
+  .bg-card { background-color: var(--card); }
+  .bg-primary { background-color: var(--primary); }
+  .bg-muted { background-color: var(--muted); }
+  .text-foreground { color: var(--foreground); }
+  .text-primary { color: var(--primary); }
+  .text-primary-foreground { color: var(--primary-foreground); }
+  .text-muted-foreground { color: var(--muted-foreground); }
+  .text-destructive { color: var(--destructive); }
+  .text-success { color: var(--success); }
+  .border-border { border-color: var(--border); }
+  .font-heading { font-family: var(--font-heading); }
+}
