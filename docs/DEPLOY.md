@@ -11,7 +11,8 @@ git push -u origin main
 ## 2. Render
 
 1. **New Web Service** → connect `pathway-prep-exams` repo (or use `render.yaml` Blueprint)
-2. **Instance type:** Free
+2. **Build command:** `npm install && npm run exam:build` (required — without this you get `Cannot GET /`)
+3. **Instance type:** Free
 3. **Environment variables** (copy from `.env.example`):
 
 | Variable | Notes |

@@ -520,6 +520,12 @@ app.get("/assets/question-import-template.xlsx", (req, res) => {
 const uiOut = path.join(__dirname, "exam-portal-design", "out");
 const uiBuilt = fs.existsSync(path.join(uiOut, "index.html"));
 
+if (!uiBuilt) {
+  console.warn(
+    "Exam UI not built — run `npm run exam:build` during deploy. Pages will return Cannot GET /."
+  );
+}
+
 if (uiBuilt) {
   app.use(express.static(uiOut, { index: false, redirect: false }));
   const withTrailingSlash = (p) => (p.endsWith("/") ? p : `${p}/`);

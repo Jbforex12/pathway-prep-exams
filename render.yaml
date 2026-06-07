@@ -2,10 +2,12 @@ services:
   - type: web
     name: pathway-prep-exams
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm install && npm run exam:build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: TURSO_DATABASE_URL
         sync: false
       - key: TURSO_AUTH_TOKEN
