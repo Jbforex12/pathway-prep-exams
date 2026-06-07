@@ -40,6 +40,8 @@ const {
 } = require("./lib/exam-engine");
 const { parseExcelBuffer } = require("./lib/import-excel");
 const { parsePdfBuffer } = require("./lib/import-pdf");
+const { importQuestionsForExam } = require("./lib/import-questions");
+const { normalizeQuestionInput } = require("./lib/question-types");
 
 function env(name) {
   let v = (process.env[name] || "").trim();
@@ -313,7 +315,7 @@ app.post("/api/exam/admin/exams", authAdmin, async (req, res) => {
       course_name,
       Math.min(100, Math.max(0, parseInt(body.cutoff_percent, 10) || 70)),
       Math.max(5, parseInt(body.duration_minutes, 10) || 60),
-      Math.max(1, parseInt(body.question_count, 10) || 20),
+      Math.max(1, parseInt(body.question_count, 10) || 10),
       body.shuffle_mode === "options_only" ? "options_only" : "questions",
       now,
       now
@@ -333,6 +335,7 @@ app.get("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
       id: q.id,
       sort_order: q.sort_order,
       prompt: q.prompt,
+      question_type: q.question_type || "multiple_choice",
       options: parseOptions(q.options_json),
       correct_index: q.correct_index
     }))
@@ -383,45 +386,45 @@ app.post("/api/exam/admin/exams/:id/publish", authAdmin, async (req, res) => {
     "SELECT COUNT(*) AS n FROM questions WHERE exam_id = ?",
     [req.params.id]
   );
-  if ((count?.n || 0) < exam.question_count) {
+  const pool = count?.n || 0;
+  if (pool < 1) {
     return res.status(400).json({
-      error: `Need at least ${exam.question_count} questions before publishing.`
+      error: "Add at least one question before publishing. Upload an Excel file or add questions manually."
     });
   }
+  const now = new Date().toISOString();
+  const perAttempt = Math.min(exam.question_count, pool);
   await getDb().run(
-    "UPDATE exams SET status = 'published', updated_at = ? WHERE id = ?",
-    [new Date().toISOString(), req.params.id]
+    "UPDATE exams SET status = 'published', question_count = ?, updated_at = ? WHERE id = ?",
+    [perAttempt, now, req.params.id]
   );
-  res.json({ exam: await getExamById(req.params.id) });
+  res.json({ exam: await getExamById(req.params.id), message: `Published with ${perAttempt} question(s) per attempt.` });
 });
 
 // ─── Admin questions ──────────────────────────────────────────────────────────
 app.post("/api/exam/admin/exams/:id/questions", authAdmin, async (req, res) => {
   const exam = await getExamById(req.params.id);
   if (!exam) return res.status(404).json({ error: "Exam not found." });
-  const body = req.body || {};
-  const prompt = String(body.prompt || "").trim();
-  const options = Array.isArray(body.options) ? body.options.map(String).filter(Boolean) : [];
-  const correct_index = parseInt(body.correct_index, 10);
-  if (!prompt || options.length < 2 || correct_index < 0 || correct_index >= options.length) {
-    return res.status(400).json({ error: "Invalid question data." });
-  }
+  const q = normalizeQuestionInput(req.body || {});
+  if (!q) return res.status(400).json({ error: "Invalid question data." });
   const id = newId("q");
   const now = new Date().toISOString();
   await getDb().run(
-    `INSERT INTO questions (id, exam_id, sort_order, prompt, options_json, correct_index, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO questions
+     (id, exam_id, sort_order, prompt, question_type, options_json, correct_index, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       req.params.id,
-      parseInt(body.sort_order, 10) || 0,
-      prompt,
-      JSON.stringify(options),
-      correct_index,
+      parseInt(req.body?.sort_order, 10) || 0,
+      q.prompt,
+      q.question_type,
+      JSON.stringify(q.options),
+      q.correct_index,
       now
     ]
   );
-  res.status(201).json({ id, prompt, options, correct_index });
+  res.status(201).json({ id, ...q });
 });
 
 app.patch("/api/exam/admin/questions/:id", authAdmin, async (req, res) => {
@@ -469,32 +472,40 @@ app.post("/api/exam/admin/exams/:id/import/confirm", authAdmin, async (req, res)
   if (!exam) return res.status(404).json({ error: "Exam not found." });
   const questions = Array.isArray(req.body?.questions) ? req.body.questions : [];
   if (!questions.length) return res.status(400).json({ error: "No questions to import." });
-  if (req.body?.replace) {
-    await getDb().run("DELETE FROM questions WHERE exam_id = ?", [req.params.id]);
+  const result = await importQuestionsForExam(req.params.id, questions, {
+    replace: req.body?.replace !== false
+  });
+  res.json({
+    imported: result.imported,
+    pool: result.pool,
+    message: `Imported ${result.imported} question(s).`
+  });
+});
+
+app.post("/api/exam/admin/exams/:id/import/excel", authAdmin, async (req, res) => {
+  const exam = await getExamById(req.params.id);
+  if (!exam) return res.status(404).json({ error: "Exam not found." });
+  const b64 = String(req.body?.fileBase64 || "");
+  if (!b64) return res.status(400).json({ error: "No file uploaded." });
+  try {
+    const buffer = Buffer.from(b64, "base64");
+    const parsed = parseExcelBuffer(buffer);
+    if (!parsed.questions.length) {
+      return res.status(400).json({
+        error: parsed.errors[0] || "No valid questions found in the Excel file.",
+        errors: parsed.errors
+      });
+    }
+    const result = await importQuestionsForExam(req.params.id, parsed.questions, { replace: true });
+    res.json({
+      imported: result.imported,
+      pool: result.pool,
+      errors: parsed.errors,
+      message: `Imported ${result.imported} question(s) from Excel.`
+    });
+  } catch (e) {
+    res.status(400).json({ error: e.message || "Import failed." });
   }
-  const now = new Date().toISOString();
-  for (const q of questions) {
-    const options = Array.isArray(q.options) ? q.options.map(String).filter(Boolean) : [];
-    if (!q.prompt || options.length < 2) continue;
-    await getDb().run(
-      `INSERT INTO questions (id, exam_id, sort_order, prompt, options_json, correct_index, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        newId("q"),
-        req.params.id,
-        parseInt(q.sort_order, 10) || 0,
-        String(q.prompt).trim(),
-        JSON.stringify(options),
-        parseInt(q.correct_index, 10) || 0,
-        now
-      ]
-    );
-  }
-  const count = await getDb().get(
-    "SELECT COUNT(*) AS n FROM questions WHERE exam_id = ?",
-    [req.params.id]
-  );
-  res.json({ imported: count?.n || 0 });
 });
 
 app.get("/api/exam/admin/attempts", authAdmin, async (req, res) => {

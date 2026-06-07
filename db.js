@@ -21,6 +21,7 @@ const EXAM_SCHEMA_SQL = `
       exam_id TEXT NOT NULL,
       sort_order INTEGER NOT NULL DEFAULT 0,
       prompt TEXT NOT NULL,
+      question_type TEXT NOT NULL DEFAULT 'multiple_choice',
       options_json TEXT NOT NULL,
       correct_index INTEGER NOT NULL,
       created_at TEXT NOT NULL,
@@ -129,6 +130,22 @@ class ExamDatabase {
   }
 }
 
+async function migrateSchema(db) {
+  const addColumn = async (sql) => {
+    try {
+      await db.run(sql);
+    } catch (e) {
+      const msg = String(e.message || "");
+      if (!msg.includes("duplicate column") && !msg.includes("already exists")) {
+        throw e;
+      }
+    }
+  };
+  await addColumn(
+    "ALTER TABLE questions ADD COLUMN question_type TEXT NOT NULL DEFAULT 'multiple_choice'"
+  );
+}
+
 async function initDb(dataDir) {
   const tursoUrl = env("TURSO_DATABASE_URL");
   const tursoToken = env("TURSO_AUTH_TOKEN");
@@ -138,6 +155,7 @@ async function initDb(dataDir) {
     dbInstance = new ExamDatabase("turso", client);
     dbMode = "turso";
     await dbInstance.exec(EXAM_SCHEMA_SQL);
+    await migrateSchema(dbInstance);
     console.log("Exam database: Turso (shared with portal candidates)");
     return dbInstance;
   }
@@ -148,6 +166,7 @@ async function initDb(dataDir) {
   const local = new DatabaseSync(dbPath);
   local.exec(EXAM_SCHEMA_SQL);
   dbInstance = new ExamDatabase("local", local);
+  await migrateSchema(dbInstance);
   dbMode = "local";
   console.log(`Exam database: local SQLite (${dbPath})`);
   return dbInstance;

@@ -103,7 +103,10 @@ export async function adminUpdateExam(id: string, body: Partial<ExamAdminRow>) {
 }
 
 export async function adminPublishExam(id: string) {
-  return apiFetch('/api/exam/admin/exams/' + encodeURIComponent(id) + '/publish', { method: 'POST' })
+  return apiFetch<{ exam: ExamAdminRow; message?: string }>(
+    '/api/exam/admin/exams/' + encodeURIComponent(id) + '/publish',
+    { method: 'POST' },
+  )
 }
 
 export async function adminAddQuestion(examId: string, body: Partial<QuestionRow>) {
@@ -125,10 +128,17 @@ export async function adminImportPreview(examId: string, type: 'excel' | 'pdf', 
 }
 
 export async function adminImportConfirm(examId: string, questions: QuestionRow[], replace = true) {
-  return apiFetch('/api/exam/admin/exams/' + encodeURIComponent(examId) + '/import/confirm', {
-    method: 'POST',
-    body: JSON.stringify({ questions, replace }),
-  })
+  return apiFetch<{ imported: number; pool: number; message?: string }>(
+    '/api/exam/admin/exams/' + encodeURIComponent(examId) + '/import/confirm',
+    { method: 'POST', body: JSON.stringify({ questions, replace }) },
+  )
+}
+
+export async function adminImportExcel(examId: string, fileBase64: string) {
+  return apiFetch<{ imported: number; pool: number; errors?: string[]; message?: string }>(
+    '/api/exam/admin/exams/' + encodeURIComponent(examId) + '/import/excel',
+    { method: 'POST', body: JSON.stringify({ fileBase64 }) },
+  )
 }
 
 export async function adminAttempts() {
@@ -155,6 +165,7 @@ export type QuestionRow = {
   id?: string
   sort_order: number
   prompt: string
+  question_type?: string
   options: string[]
   correct_index: number
 }
@@ -182,7 +193,7 @@ export type ExamSession = {
   durationMinutes: number
   startedAt: string
   endsAt: string
-  questions: { id: string; prompt: string; options: string[] }[]
+  questions: { id: string; prompt: string; question_type?: string; options: string[] }[]
   answers: Record<string, number>
   questionOrder: string[]
 }

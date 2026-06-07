@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Send } from 'lucide-react'
 import { Spinner } from '@/components/ui-bits'
+import { questionTypeLabel } from '@/lib/exam-data'
 import { ApiError, saveAnswer, startExam, submitExam, type ExamSession } from '@/lib/exam-api'
 
 function ExamInner() {
@@ -122,11 +123,15 @@ function ExamInner() {
 
       <main className="safe-px safe-pb mx-auto max-w-3xl py-8">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <p className="text-xs font-semibold tracking-wide text-primary uppercase">Question {index + 1}</p>
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            Question {index + 1} · {questionTypeLabel(current?.question_type)}
+          </p>
           <h2 className="mt-3 text-lg font-medium leading-relaxed">{current?.prompt}</h2>
-          <div className="mt-6 space-y-3">
+          <div className={`mt-6 gap-3 ${current?.options.length === 2 ? 'grid sm:grid-cols-2' : 'space-y-3'}`}>
             {current?.options.map((opt, i) => {
               const selected = answers[current.id] === i
+              const label =
+                (current?.options.length || 0) <= 6 ? String.fromCharCode(65 + i) : String(i + 1)
               return (
                 <button
                   key={i}
@@ -136,10 +141,12 @@ function ExamInner() {
                     selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'
                   }`}
                 >
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold">
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  <span>{opt}</span>
+                  {(current?.options.length || 0) > 2 ? (
+                    <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold">
+                      {label}
+                    </span>
+                  ) : null}
+                  <span className={current?.options.length === 2 ? 'text-base font-medium' : ''}>{opt}</span>
                 </button>
               )
             })}
