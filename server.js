@@ -31,6 +31,7 @@ const { sendOtpEmail, sendExamCertificateEmail, getEmailConfig } = require("./li
 const { generateExamCertificatePdf } = require("./lib/exam-certificate");
 const { ensureTemplateFile } = require("./lib/certificate-pdf");
 const {
+  getExamPreview,
   startAttempt,
   saveAnswer,
   submitAttempt,
@@ -231,6 +232,15 @@ app.get("/api/exam/student/attempts", studentLimiter, authStudent, async (req, r
     [req.candidate.id]
   );
   res.json({ attempts });
+});
+
+app.get("/api/exam/student/exams/:id/preview", studentLimiter, authStudent, async (req, res) => {
+  try {
+    const preview = await getExamPreview(req.params.id, req.candidate);
+    res.json(preview);
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
 });
 
 app.post("/api/exam/student/exams/:id/start", studentLimiter, authStudent, async (req, res) => {
@@ -607,6 +617,36 @@ app.get("/api/exam/admin/attempts", authAdmin, async (req, res) => {
      LIMIT 200`
   );
   res.json({ attempts });
+});
+
+app.get("/api/exam/admin/attempts/export", authAdmin, async (req, res) => {
+  const attempts = await getDb().all(
+    `SELECT a.score_percent, a.passed, a.submitted_at, a.started_at,
+            e.title AS exam_title, c.name AS candidate_name, c.email AS candidate_email
+     FROM exam_attempts a
+     JOIN exams e ON e.id = a.exam_id
+     LEFT JOIN candidates c ON c.id = a.candidate_id
+     WHERE a.submitted_at IS NOT NULL
+     ORDER BY a.submitted_at DESC`
+  );
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [
+    "Student,Email,Exam,Score,Result,Submitted,Started",
+    ...attempts.map((a) =>
+      [
+        esc(a.candidate_name),
+        esc(a.candidate_email),
+        esc(a.exam_title),
+        esc(a.score_percent),
+        esc(a.passed ? "Passed" : "Failed"),
+        esc(a.submitted_at),
+        esc(a.started_at)
+      ].join(",")
+    )
+  ];
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="pathway-prep-exam-results.csv"');
+  res.send(lines.join("\n"));
 });
 
 app.get("/api/exam/admin/reschedules", authAdmin, async (req, res) => {

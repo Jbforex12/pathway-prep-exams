@@ -16,10 +16,12 @@ const NAV = [
 export function AdminShell({
   title,
   subtitle,
+  actions,
   children,
 }: {
   title: string
   subtitle?: string
+  actions?: React.ReactNode
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -67,14 +69,17 @@ export function AdminShell({
         </nav>
       </header>
       <main className="safe-px safe-pb mx-auto w-full max-w-7xl py-4 sm:py-8">
-        <div className="mb-4 sm:mb-6">
-          <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">Pathway Prep Exams</p>
-          <h1 className="mt-1 font-heading text-xl font-semibold tracking-tight break-words sm:text-3xl">{title}</h1>
-          {subtitle ? (
-            <p className="mt-2 max-w-2xl text-xs leading-relaxed break-words text-muted-foreground sm:text-sm">
-              {subtitle}
-            </p>
-          ) : null}
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">Pathway Prep Exams</p>
+            <h1 className="mt-1 font-heading text-xl font-semibold tracking-tight break-words sm:text-3xl">{title}</h1>
+            {subtitle ? (
+              <p className="mt-2 max-w-2xl text-xs leading-relaxed break-words text-muted-foreground sm:text-sm">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
         </div>
         {children}
       </main>

@@ -55,6 +55,10 @@ export async function studentAttempts() {
   return apiFetch<{ attempts: AttemptRow[] }>('/api/exam/student/attempts')
 }
 
+export async function getExamPreview(examId: string) {
+  return apiFetch<ExamPreview>('/api/exam/student/exams/' + encodeURIComponent(examId) + '/preview')
+}
+
 export async function startExam(examId: string) {
   return apiFetch<ExamSession>('/api/exam/student/exams/' + encodeURIComponent(examId) + '/start', { method: 'POST' })
 }
@@ -219,6 +223,20 @@ export type ExhaustedExamRow = {
   last_reset_at?: string | null
 }
 
+export type ExamPreview = {
+  examId: string
+  examTitle: string
+  durationMinutes: number
+  questionCount: number
+  cutoffPercent: number
+  poolSize: number
+  attemptsUsed: number
+  attemptsMax: number
+  canTake: boolean
+  hasInProgress: boolean
+  inProgressAttemptId?: string | null
+}
+
 export type ExamSession = {
   attemptId: string
   examId: string
@@ -226,6 +244,7 @@ export type ExamSession = {
   durationMinutes: number
   startedAt: string
   endsAt: string
+  studentName?: string
   questions: { id: string; prompt: string; question_type?: string; options: string[] }[]
   answers: Record<string, number>
   questionOrder: string[]

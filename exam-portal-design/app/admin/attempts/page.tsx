@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CalendarClock } from 'lucide-react'
+import { CalendarClock, Download } from 'lucide-react'
 import { AdminShell } from '@/components/admin-shell'
 import { Spinner } from '@/components/ui-bits'
 import {
@@ -82,6 +82,15 @@ export default function AdminAttemptsPage() {
     <AdminShell
       title="Attempts"
       subtitle="Submitted exam attempts, scores, and rescheduling when learners have used both tries."
+      actions={
+        <a
+          href="/api/exam/admin/attempts/export"
+          className="touch-target inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-semibold text-foreground hover:border-primary/40"
+        >
+          <Download className="size-4" />
+          Export CSV
+        </a>
+      }
     >
       {message ? (
         <p className="mb-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">{message}</p>

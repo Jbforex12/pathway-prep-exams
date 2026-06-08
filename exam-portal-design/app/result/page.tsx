@@ -67,8 +67,8 @@ function ResultInner() {
         ) : null}
         {result.passed && !result.certificateSent ? (
           <p className="mt-4 text-sm text-muted-foreground">
-            Your certificate is being prepared. Refresh this page in a moment, or contact your training partner if it
-            does not arrive.
+            Your certificate is being prepared. Refresh this page in a moment, or contact your Agent if it does not
+            arrive.
           </p>
         ) : null}
         {!result.passed && result.resultEmailSent ? (

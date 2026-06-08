@@ -89,7 +89,7 @@ export default function DashboardPage() {
                   className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5"
                 >
                   <div className="min-w-0">
-                    <h3 className="font-semibold break-words">{exam.title}</h3>
+                    <h3 className="font-bold break-words">{exam.title}</h3>
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3.5 shrink-0" />

@@ -63,10 +63,21 @@
   @media (min-width: 640px) {
     .page-card { padding: 2rem; border-radius: 1rem; }
   }
-  .touch-target {
-    min-height: 2.75rem;
-    min-width: 2.75rem;
-  }
+.touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.exam-no-copy {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.exam-no-copy * {
+  -webkit-user-select: none;
+  user-select: none;
+}
   .mobile-scroll-x {
     margin-left: max(-1rem, calc(-1 * env(safe-area-inset-left)));
     margin-right: max(-1rem, calc(-1 * env(safe-area-inset-right)));
