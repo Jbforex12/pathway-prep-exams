@@ -58,6 +58,7 @@ function QuestionsInner() {
   const [statusErr, setStatusErr] = useState('')
   const [importing, setImporting] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function load() {
     const data = await adminGetExam(examId)
@@ -155,6 +156,29 @@ function QuestionsInner() {
       showError(err instanceof ApiError ? err.message : 'Could not publish exam.')
     } finally {
       setPublishing(false)
+    }
+  }
+
+  async function deleteQuestion(q: QuestionRow) {
+    if (!q.id) return
+    const label = q.prompt.length > 80 ? `${q.prompt.slice(0, 80)}…` : q.prompt
+    if (
+      !window.confirm(
+        `Delete this question?\n\n"${label}"\n\nThis cannot be undone. Republish the exam if it is already live.`,
+      )
+    ) {
+      return
+    }
+    setDeletingId(q.id)
+    setStatusErr('')
+    try {
+      await adminDeleteQuestion(q.id)
+      await load()
+      showSuccess('Question deleted.')
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Could not delete question.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -390,11 +414,14 @@ function QuestionsInner() {
               {q.id ? (
                 <button
                   type="button"
-                  onClick={() => adminDeleteQuestion(q.id!).then(load)}
-                  className="shrink-0 text-destructive"
+                  disabled={deletingId === q.id}
+                  onClick={() => void deleteQuestion(q)}
+                  className="touch-target inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
                   aria-label="Delete question"
+                  title="Delete question"
                 >
-                  <Trash2 className="size-4" />
+                  {deletingId === q.id ? <Spinner className="size-4" /> : <Trash2 className="size-4" />}
+                  <span className="hidden sm:inline">Delete</span>
                 </button>
               ) : null}
             </div>
