@@ -42,11 +42,17 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/admin/exams/" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link
+              href="/admin/exams/"
+              className="touch-target inline-flex h-12 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground sm:h-auto"
+            >
               Manage exams
             </Link>
-            <Link href="/admin/attempts/" className="rounded-lg border border-border px-4 py-2 text-sm font-medium">
+            <Link
+              href="/admin/attempts/"
+              className="touch-target inline-flex h-12 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium sm:h-auto"
+            >
               View attempts
             </Link>
           </div>

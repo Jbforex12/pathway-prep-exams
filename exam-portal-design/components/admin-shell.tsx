@@ -33,20 +33,21 @@ export function AdminShell({
   return (
     <div className="min-h-dvh bg-muted/40">
       <header className="safe-pt sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
-        <div className="safe-px mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4">
-          <Link href="/admin/dashboard/">
+        <div className="safe-px mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 sm:h-16 sm:gap-4">
+          <Link href="/admin/dashboard/" className="min-w-0 shrink">
             <PathwayLogo subtitle="Exam Admin" />
           </Link>
           <button
             type="button"
             onClick={signOut}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium"
+            className="touch-target inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium sm:px-3"
+            aria-label="Sign out"
           >
             <LogOut className="size-4" />
-            Sign out
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
-        <nav className="safe-px mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto border-t border-border/60">
+        <nav className="safe-px mx-auto flex w-full max-w-7xl gap-0 overflow-x-auto border-t border-border/60 sm:gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname?.startsWith(href.replace(/\/$/, ''))
             return (
@@ -54,7 +55,7 @@ export function AdminShell({
                 key={href}
                 href={href}
                 className={cn(
-                  'inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium',
+                  'touch-target inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium sm:px-4',
                   active ? 'border-primary text-primary' : 'border-transparent text-muted-foreground',
                 )}
               >
@@ -65,11 +66,15 @@ export function AdminShell({
           })}
         </nav>
       </header>
-      <main className="safe-px safe-pb mx-auto w-full max-w-7xl py-6 sm:py-8">
-        <div className="mb-6">
+      <main className="safe-px safe-pb mx-auto w-full max-w-7xl py-4 sm:py-8">
+        <div className="mb-4 sm:mb-6">
           <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">Pathway Prep Exams</p>
-          <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">{title}</h1>
-          {subtitle ? <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{subtitle}</p> : null}
+          <h1 className="mt-1 font-heading text-xl font-semibold tracking-tight break-words sm:text-3xl">{title}</h1>
+          {subtitle ? (
+            <p className="mt-2 max-w-2xl text-xs leading-relaxed break-words text-muted-foreground sm:text-sm">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
         {children}
       </main>

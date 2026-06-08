@@ -31,7 +31,7 @@ export function TextInput({
   return (
     <input
       className={cn(
-        'h-11 w-full rounded-lg border border-border bg-background px-3.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+        'h-12 w-full min-h-12 rounded-lg border border-border bg-background px-3.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:h-11 sm:min-h-11 sm:text-sm',
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export function Select({
   return (
     <select
       className={cn(
-        'h-11 w-full rounded-lg border border-border bg-background px-3.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+        'h-12 w-full min-h-12 rounded-lg border border-border bg-background px-3.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:h-11 sm:min-h-11 sm:text-sm',
         className,
       )}
       {...props}

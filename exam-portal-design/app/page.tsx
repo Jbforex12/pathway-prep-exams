@@ -32,8 +32,8 @@ export default function StudentLoginPage() {
   }
 
   return (
-    <main className="safe-px flex min-h-dvh items-center justify-center bg-background">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
+    <main className="safe-px safe-pb flex min-h-dvh items-center justify-center bg-background py-6">
+      <div className="page-card w-full shadow-sm">
         <PathwayLogo subtitle="Exams" />
         <h1 className="mt-6 font-heading text-2xl font-semibold">Student sign in</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -54,7 +54,7 @@ export default function StudentLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="touch-target inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
             {loading ? <Spinner /> : <ArrowRight className="size-4" />}
             {sent ? 'Code sent — continue' : 'Send sign-in code'}

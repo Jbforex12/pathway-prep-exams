@@ -41,8 +41,8 @@ function ResultInner() {
   }
 
   return (
-    <main className="safe-px flex min-h-dvh items-center justify-center bg-muted/30 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm text-center">
+    <main className="safe-px safe-pb flex min-h-dvh items-center justify-center bg-muted/30 py-6 sm:py-10">
+      <div className="page-card w-full max-w-lg text-center shadow-sm sm:p-8">
         {result.passed ? (
           <CheckCircle2 className="mx-auto size-12 text-success" />
         ) : (
@@ -50,7 +50,7 @@ function ResultInner() {
         )}
         <h1 className="mt-4 font-heading text-2xl font-semibold">{result.passed ? 'Congratulations!' : 'Exam complete'}</h1>
         <p className="mt-2 text-muted-foreground">{result.examTitle}</p>
-        <p className="mt-6 text-5xl font-bold text-primary">{result.scorePercent}%</p>
+        <p className="mt-6 text-4xl font-bold text-primary sm:text-5xl">{result.scorePercent}%</p>
         <p className="mt-2 text-sm text-muted-foreground">
           {result.correct} of {result.total} correct · Pass mark {result.cutoffPercent}%
         </p>
@@ -73,7 +73,10 @@ function ResultInner() {
         {result.canRetake ? (
           <p className="mt-4 text-sm text-muted-foreground">You have one retake available from your dashboard.</p>
         ) : null}
-        <Link href="/dashboard/" className="mt-8 inline-flex h-10 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">
+        <Link
+          href="/dashboard/"
+          className="touch-target mt-8 inline-flex h-12 w-full items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground sm:h-10 sm:w-auto"
+        >
           Back to dashboard
         </Link>
       </div>

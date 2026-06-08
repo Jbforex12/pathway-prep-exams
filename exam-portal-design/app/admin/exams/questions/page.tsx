@@ -187,7 +187,7 @@ function QuestionsInner() {
         </div>
       ) : null}
 
-      <div className="mb-6 rounded-xl border border-border bg-card p-5">
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 sm:p-5">
         <div className="flex items-center gap-2">
           <Clock className="size-5 text-primary" />
           <h3 className="font-semibold">Exam timer</h3>
@@ -195,25 +195,27 @@ function QuestionsInner() {
         <p className="mt-1 text-sm text-muted-foreground">
           Students see a live countdown when they start. At 0:00 the exam auto-submits and shows their results.
         </p>
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <Field label="Duration (minutes)">
-            <TextInput
-              type="number"
-              min={5}
-              max={180}
-              value={timerMinutes}
-              onChange={(e) => setTimerMinutes(parseInt(e.target.value, 10) || 30)}
-            />
-          </Field>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="w-full sm:w-auto sm:min-w-[10rem]">
+            <Field label="Duration (minutes)">
+              <TextInput
+                type="number"
+                min={5}
+                max={180}
+                value={timerMinutes}
+                onChange={(e) => setTimerMinutes(parseInt(e.target.value, 10) || 30)}
+              />
+            </Field>
+          </div>
           <button
             type="button"
             disabled={savingTimer}
             onClick={() => void saveTimer()}
-            className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            className="touch-target h-12 w-full rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60 sm:h-10 sm:w-auto"
           >
             {savingTimer ? 'Saving…' : 'Save timer'}
           </button>
-          <span className="pb-2 text-xs text-muted-foreground">5–180 minutes · default 30</span>
+          <span className="text-xs text-muted-foreground sm:pb-2">5–180 minutes · default 30</span>
         </div>
       </div>
 
@@ -250,11 +252,14 @@ function QuestionsInner() {
           <strong>Option1</strong>–<strong>Option6</strong> (or OptionA–D), and <strong>Answer</strong> (A/B/C, 1/2/3, or
           exact option text). Questions are imported immediately.
         </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <a href="/assets/question-import-template.xlsx" className="rounded-lg border border-border px-3 py-2 text-sm">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <a
+            href="/assets/question-import-template.xlsx"
+            className="touch-target inline-flex h-12 items-center justify-center rounded-lg border border-border px-3 text-sm sm:h-auto"
+          >
             Download template
           </a>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+          <label className="touch-target inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground sm:h-auto">
             {importing ? <Spinner className="size-4" /> : <Upload className="size-4" />}
             {importing ? 'Importing…' : 'Upload Excel'}
             <input
@@ -274,7 +279,7 @@ function QuestionsInner() {
               type="button"
               disabled={publishing || pool < 1}
               onClick={() => void publish()}
-              className="rounded-lg border border-primary bg-primary/10 px-4 py-2 text-sm font-semibold text-primary disabled:opacity-40"
+              className="touch-target h-12 w-full rounded-lg border border-primary bg-primary/10 px-4 text-sm font-semibold text-primary disabled:opacity-40 sm:h-auto sm:w-auto"
             >
               {publishing ? 'Publishing…' : 'Publish exam'}
             </button>
@@ -331,7 +336,10 @@ function QuestionsInner() {
             ))}
           </Select>
         </Field>
-        <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+        <button
+          type="submit"
+          className="touch-target h-12 w-full rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground sm:h-auto sm:w-auto"
+        >
           Add question
         </button>
       </form>

@@ -43,6 +43,8 @@ export default function DashboardPage() {
     router.replace('/')
   }
 
+  const submittedAttempts = attempts.filter((a) => a.submitted_at)
+
   if (loading) {
     return (
       <main className="flex min-h-dvh items-center justify-center text-muted-foreground">
@@ -54,48 +56,57 @@ export default function DashboardPage() {
   return (
     <div className="min-h-dvh bg-muted/30">
       <header className="safe-pt border-b border-border bg-card">
-        <div className="safe-px mx-auto flex h-16 max-w-4xl items-center justify-between">
+        <div className="safe-px mx-auto flex h-14 max-w-4xl items-center justify-between gap-3 sm:h-16">
           <PathwayLogo subtitle="Exams" />
-          <button type="button" onClick={signOut} className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <button
+            type="button"
+            onClick={signOut}
+            className="touch-target inline-flex shrink-0 items-center gap-2 text-sm text-muted-foreground"
+          >
             <LogOut className="size-4" />
-            Sign out
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </header>
-      <main className="safe-px safe-pb mx-auto max-w-4xl py-8">
-        <h1 className="font-heading text-2xl font-semibold">Welcome, {name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Course: {course || 'Not set'}</p>
+      <main className="safe-px safe-pb mx-auto max-w-4xl py-5 sm:py-8">
+        <h1 className="font-heading text-xl font-semibold break-words sm:text-2xl">Welcome, {name}</h1>
+        <p className="mt-1 text-sm text-muted-foreground break-words">Course: {course || 'Not set'}</p>
 
-        <section className="mt-8">
+        <section className="mt-6 sm:mt-8">
           <h2 className="text-sm font-semibold tracking-wide text-primary uppercase">Available exams</h2>
           <div className="mt-3 space-y-3">
             {exams.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground sm:p-8">
                 No published exams for your course yet.
               </p>
             ) : (
               exams.map((exam) => (
-                <div key={exam.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-                  <div>
-                    <h3 className="font-semibold">{exam.title}</h3>
-                    <p className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                <div
+                  key={exam.id}
+                  className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                >
+                  <div className="min-w-0">
+                    <h3 className="font-semibold break-words">{exam.title}</h3>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
-                        <Clock className="size-3.5" />
-                        {exam.duration_minutes} min timer
+                        <Clock className="size-3.5 shrink-0" />
+                        {exam.duration_minutes} min
                       </span>
                       <span>{exam.question_count} questions</span>
                       <span>Pass: {exam.cutoff_percent}%</span>
                       <span>
-                        Attempts: {exam.attemptsUsed ?? 0} / {exam.attemptsMax ?? 2}
+                        Attempts: {exam.attemptsUsed ?? 0}/{exam.attemptsMax ?? 2}
                       </span>
-                    </p>
+                    </div>
                   </div>
                   {exam.canTake === false ? (
-                    <span className="text-sm font-medium text-muted-foreground">No attempts left</span>
+                    <span className="text-center text-sm font-medium text-muted-foreground sm:text-right">
+                      No attempts left
+                    </span>
                   ) : (
                     <Link
                       href={`/exam/?id=${encodeURIComponent(exam.id)}`}
-                      className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
+                      className="touch-target inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground sm:h-10 sm:w-auto"
                     >
                       <PlayCircle className="size-4" />
                       {(exam.attemptsUsed ?? 0) > 0 ? 'Retake exam' : 'Start exam'}
@@ -107,10 +118,26 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {attempts.filter((a) => a.submitted_at).length > 0 ? (
-          <section className="mt-10">
+        {submittedAttempts.length > 0 ? (
+          <section className="mt-8 sm:mt-10">
             <h2 className="text-sm font-semibold tracking-wide text-primary uppercase">Your results</h2>
-            <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card">
+
+            <div className="mt-3 space-y-3 md:hidden">
+              {submittedAttempts.map((a) => (
+                <div key={a.id} className="rounded-xl border border-border bg-card p-4">
+                  <p className="font-medium break-words">{a.exam_title}</p>
+                  <p className="mt-2 text-2xl font-bold text-primary">{a.score_percent}%</p>
+                  <Link
+                    href={`/result/?id=${encodeURIComponent(a.id)}`}
+                    className="mt-3 inline-flex text-sm font-medium text-primary"
+                  >
+                    {a.passed ? 'Passed' : 'Failed'} — view result
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 hidden overflow-hidden rounded-xl border border-border bg-card md:block">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-border bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
@@ -120,19 +147,17 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {attempts
-                    .filter((a) => a.submitted_at)
-                    .map((a) => (
-                      <tr key={a.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3">{a.exam_title}</td>
-                        <td className="px-4 py-3">{a.score_percent}%</td>
-                        <td className="px-4 py-3">
-                          <Link href={`/result/?id=${encodeURIComponent(a.id)}`} className="font-medium text-primary">
-                            {a.passed ? 'Passed' : 'Failed'} — view
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                  {submittedAttempts.map((a) => (
+                    <tr key={a.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-3">{a.exam_title}</td>
+                      <td className="px-4 py-3">{a.score_percent}%</td>
+                      <td className="px-4 py-3">
+                        <Link href={`/result/?id=${encodeURIComponent(a.id)}`} className="font-medium text-primary">
+                          {a.passed ? 'Passed' : 'Failed'} — view
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

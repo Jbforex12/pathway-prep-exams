@@ -29,8 +29,8 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="safe-px flex min-h-dvh items-center justify-center">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
+    <main className="safe-px safe-pb flex min-h-dvh items-center justify-center py-6">
+      <div className="page-card w-full shadow-sm">
         <PathwayLogo subtitle="Exam Admin" />
         <h1 className="mt-6 font-heading text-2xl font-semibold">Admin sign in</h1>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
