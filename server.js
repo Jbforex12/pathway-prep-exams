@@ -35,9 +35,9 @@ const {
   getAttemptResult,
   getExamById,
   listQuestionsForExam,
-  courseMatches,
   parseOptions
 } = require("./lib/exam-engine");
+const { courseMatches } = require("./lib/course-match");
 const { parseExcelBuffer } = require("./lib/import-excel");
 const { parsePdfBuffer } = require("./lib/import-pdf");
 const { importQuestionsForExam } = require("./lib/import-questions");
@@ -184,16 +184,17 @@ app.get("/api/exam/student/me", studentLimiter, authStudent, (req, res) => {
 
 // ─── Student exams ────────────────────────────────────────────────────────────
 app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res) => {
-  const course = String(req.candidate.course_name || "").trim();
-  const exams = await getDb().all(
+  const candidateCourse = String(req.candidate.course_name || "").trim();
+  const rows = await getDb().all(
     `SELECT e.*,
       (SELECT COUNT(*) FROM exam_attempts a
        WHERE a.exam_id = e.id AND a.candidate_id = ? AND a.submitted_at IS NOT NULL) AS completed
      FROM exams e
-     WHERE e.status = 'published' AND lower(trim(e.course_name)) = lower(trim(?))
+     WHERE e.status = 'published'
      ORDER BY e.created_at DESC`,
-    [req.candidate.id, course]
+    [req.candidate.id]
   );
+  const exams = rows.filter((e) => courseMatches(candidateCourse, e.course_name));
   res.json({ exams });
 });
 
