@@ -12,8 +12,9 @@
     "exam:install": "npm install --prefix exam-portal-design",
     "exam:build": "npm run build --prefix exam-portal-design",
     "template:build": "node scripts/build-import-template.js",
+    "cert:build-template": "node scripts/build-certificate-template.js",
     "migrate:exam-titles": "node scripts/migrate-exam-titles.js",
-    "postinstall": "npm run template:build && npm run exam:install"
+    "postinstall": "npm run cert:build-template && npm run template:build && npm run exam:install"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
