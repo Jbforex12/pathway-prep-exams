@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Clock, Send } from 'lucide-react'
 import { Spinner } from '@/components/ui-bits'
-import { questionTypeLabel } from '@/lib/exam-data'
 import { ApiError, saveAnswer, startExam, submitExam, type ExamSession } from '@/lib/exam-api'
 
 function ExamInner() {
@@ -176,10 +175,7 @@ function ExamInner() {
         ) : null}
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
-          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
-            Question {index + 1} · {questionTypeLabel(current?.question_type)}
-          </p>
-          <h2 className="mt-3 text-base font-medium leading-relaxed sm:text-lg">{current?.prompt}</h2>
+          <h2 className="text-base font-medium leading-relaxed sm:text-lg">{current?.prompt}</h2>
           <div className={`mt-5 gap-3 sm:mt-6 ${current?.options.length === 2 ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'space-y-3'}`}>
             {current?.options.map((opt, i) => {
               const selected = answers[current.id] === i
