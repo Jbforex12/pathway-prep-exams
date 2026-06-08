@@ -13,7 +13,12 @@ const {
   newId,
   isProductionDeploy
 } = require("./lib/security");
-const { rateLimitMiddleware, getRateLimitCount, recordRateLimitHit } = require("./lib/rate-limit-store");
+const {
+  rateLimitMiddleware,
+  getRateLimitCount,
+  recordRateLimitHit,
+  checkRateLimit
+} = require("./lib/rate-limit-store");
 const {
   signAdminSession,
   verifyAdminSession,
@@ -138,7 +143,7 @@ app.get("/health", (req, res) => {
 app.get("/api/certificates/:id/verify", certVerifyLimiter, async (req, res) => {
   try {
     const id = String(req.params.id || "").trim().toUpperCase();
-    if (!/^PP-CERT-[A-F0-9]{8}$/.test(id) && !/^PP-CERT-[A-F0-9]{32}$/.test(id)) {
+    if (!/^PP-CERT-[A-F0-9]{32}$/.test(id) && !/^PP-CERT-[A-F0-9]{8}$/.test(id)) {
       return res.status(400).json({ valid: false, error: "Invalid certificate ID format." });
     }
     const row = await getDb().get(
@@ -173,6 +178,14 @@ app.post("/api/exam/student/request-code", otpRequestLimiter, async (req, res) =
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: "Enter a valid email address." });
+  }
+
+  const emailKey = `otp-request:${email}`;
+  if (!(await checkRateLimit(emailKey, 3, 3600000))) {
+    return res.json({
+      ok: true,
+      message: "If your email is registered with a training partner, a sign-in code was sent."
+    });
   }
 
   const candidate = await findCandidateByEmail(email);
@@ -264,7 +277,18 @@ app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res)
   for (const e of rows) {
     if (!courseMatches(candidateCourse, e.course_name)) continue;
     const status = await getCandidateExamStatus(e.id, req.candidate.id);
-    exams.push({ ...e, ...status });
+    exams.push({
+      id: e.id,
+      title: e.title,
+      code: e.code,
+      course_name: e.course_name,
+      duration_minutes: e.duration_minutes,
+      question_count: e.question_count,
+      cutoff_percent: e.cutoff_percent,
+      published_at: e.published_at,
+      updated_at: e.updated_at,
+      ...status
+    });
   }
   res.json({ exams, attemptsMax: MAX_ATTEMPTS_PER_EXAM });
 });
@@ -461,11 +485,13 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
       body.title ? String(body.title).trim() : null,
       body.code != null ? String(body.code).trim().toUpperCase() || null : null,
       body.course_name ? String(body.course_name).trim() : null,
-      body.cutoff_percent != null ? parseInt(body.cutoff_percent, 10) : null,
+      body.cutoff_percent != null
+        ? Math.min(100, Math.max(0, parseInt(body.cutoff_percent, 10) || 0))
+        : null,
       body.duration_minutes != null
         ? Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30))
         : null,
-      body.question_count != null ? parseInt(body.question_count, 10) : null,
+      body.question_count != null ? Math.max(1, parseInt(body.question_count, 10) || 1) : null,
       shuffleMode,
       now,
       req.params.id
@@ -536,24 +562,38 @@ app.post("/api/exam/admin/exams/:id/questions", authAdmin, async (req, res) => {
 });
 
 app.patch("/api/exam/admin/questions/:id", authAdmin, async (req, res) => {
+  const existing = await getDb().get("SELECT * FROM questions WHERE id = ?", [req.params.id]);
+  if (!existing) return res.status(404).json({ error: "Question not found." });
   const body = req.body || {};
-  const options = Array.isArray(body.options) ? body.options.map(String).filter(Boolean) : null;
+  const merged = {
+    prompt: body.prompt != null ? body.prompt : existing.prompt,
+    question_type: body.question_type != null ? body.question_type : existing.question_type,
+    options:
+      body.options != null
+        ? body.options
+        : parseOptions(existing.options_json),
+    correct_index: body.correct_index != null ? body.correct_index : existing.correct_index
+  };
+  const q = normalizeQuestionInput(merged);
+  if (!q) return res.status(400).json({ error: "Invalid question data." });
   await getDb().run(
     `UPDATE questions SET
-      prompt = COALESCE(?, prompt),
-      options_json = COALESCE(?, options_json),
-      correct_index = COALESCE(?, correct_index),
+      prompt = ?,
+      question_type = ?,
+      options_json = ?,
+      correct_index = ?,
       sort_order = COALESCE(?, sort_order)
      WHERE id = ?`,
     [
-      body.prompt ? String(body.prompt).trim() : null,
-      options ? JSON.stringify(options) : null,
-      body.correct_index != null ? parseInt(body.correct_index, 10) : null,
+      q.prompt,
+      q.question_type,
+      JSON.stringify(q.options),
+      q.correct_index,
       body.sort_order != null ? parseInt(body.sort_order, 10) : null,
       req.params.id
     ]
   );
-  res.json({ ok: true });
+  res.json({ ok: true, id: req.params.id, ...q });
 });
 
 app.delete("/api/exam/admin/questions/:id", authAdmin, async (req, res) => {

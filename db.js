@@ -169,6 +169,17 @@ async function migrateSchema(db) {
     `UPDATE exams SET published_at = updated_at
      WHERE status = 'published' AND (published_at IS NULL OR published_at = '')`
   );
+  try {
+    await db.run(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_exam_attempts_one_active
+       ON exam_attempts(exam_id, candidate_id) WHERE submitted_at IS NULL`
+    );
+  } catch (e) {
+    const msg = String(e.message || "");
+    if (!msg.includes("already exists")) {
+      console.warn("Active attempt unique index:", msg);
+    }
+  }
 }
 
 async function initDb(dataDir) {
