@@ -209,4 +209,17 @@ async function findCandidateByEmail(email) {
   );
 }
 
-module.exports = { initDb, getDb, getDbMode, findCandidateByEmail, ExamDatabase };
+async function findCandidateById(candidateId) {
+  const db = getDb();
+  const id = String(candidateId || "").trim();
+  if (!id) return null;
+  return db.get(
+    `SELECT c.*, co.company_name
+     FROM candidates c
+     LEFT JOIN companies co ON co.id = c.company_id
+     WHERE c.id = ?`,
+    [id]
+  );
+}
+
+module.exports = { initDb, getDb, getDbMode, findCandidateByEmail, findCandidateById, ExamDatabase };

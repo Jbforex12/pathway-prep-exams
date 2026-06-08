@@ -35,8 +35,12 @@ async function main() {
     to: sendTo,
     studentName: "Test Candidate",
     examTitle: "Healthcare Assistant — Final Assessment",
+    courseName: "Healthcare Assistant",
     scorePercent: 80,
     cutoffPercent: 70,
+    batch: "May",
+    agentName: "Sample Agent Ltd",
+    certificateId: "PP-CERT-TEST1234",
     pdfBuffer: buffer,
     pdfFilename: filename
   });

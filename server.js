@@ -574,8 +574,12 @@ app.post("/api/exam/admin/email/test-certificate", authAdmin, async (req, res) =
       to,
       studentName: "Test Candidate",
       examTitle: "Sample Exam",
+      courseName: "Health Care Assistant",
       scorePercent: 85,
       cutoffPercent: 70,
+      batch: "May",
+      agentName: "Sample Agent Ltd",
+      certificateId: "PP-CERT-TEST1234",
       pdfBuffer,
       pdfFilename
     });
@@ -627,9 +631,11 @@ app.post("/api/exam/admin/reschedules", authAdmin, async (req, res) => {
 
 app.post("/api/exam/admin/attempts/:id/resend-certificate", authAdmin, async (req, res) => {
   const row = await getDb().get(
-    `SELECT a.*, c.name AS candidate_name, c.email AS candidate_email
+    `SELECT a.*, c.name AS candidate_name, c.email AS candidate_email, c.batch AS candidate_batch,
+            c.course_name AS candidate_course_name, co.company_name AS candidate_agent_name
      FROM exam_attempts a
      LEFT JOIN candidates c ON c.id = a.candidate_id
+     LEFT JOIN companies co ON co.id = c.company_id
      WHERE a.id = ?`,
     [req.params.id]
   );
@@ -648,7 +654,10 @@ app.post("/api/exam/admin/attempts/:id/resend-certificate", authAdmin, async (re
     candidateRow: {
       id: row.candidate_id,
       name: row.candidate_name,
-      email: row.candidate_email
+      email: row.candidate_email,
+      batch: row.candidate_batch,
+      course_name: row.candidate_course_name,
+      company_name: row.candidate_agent_name
     },
     scorePercent: row.score_percent,
     forceResend: true
