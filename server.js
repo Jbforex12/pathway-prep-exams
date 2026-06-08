@@ -34,8 +34,11 @@ const {
   submitAttempt,
   getAttemptResult,
   getExamById,
+  getCandidateExamStatus,
+  listExhaustedCandidateExams,
   listQuestionsForExam,
   parseOptions,
+  rescheduleCandidateExam,
   MAX_ATTEMPTS_PER_EXAM
 } = require("./lib/exam-engine");
 const { courseMatches } = require("./lib/course-match");
@@ -187,25 +190,14 @@ app.get("/api/exam/student/me", studentLimiter, authStudent, (req, res) => {
 app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res) => {
   const candidateCourse = String(req.candidate.course_name || "").trim();
   const rows = await getDb().all(
-    `SELECT e.*,
-      (SELECT COUNT(*) FROM exam_attempts a
-       WHERE a.exam_id = e.id AND a.candidate_id = ? AND a.submitted_at IS NOT NULL) AS completed
-     FROM exams e
-     WHERE e.status = 'published'
-     ORDER BY e.created_at DESC`,
-    [req.candidate.id]
+    `SELECT e.* FROM exams e WHERE e.status = 'published' ORDER BY e.created_at DESC`
   );
-  const exams = rows
-    .filter((e) => courseMatches(candidateCourse, e.course_name))
-    .map((e) => {
-      const attemptsUsed = Number(e.completed) || 0;
-      return {
-        ...e,
-        attemptsUsed,
-        attemptsMax: MAX_ATTEMPTS_PER_EXAM,
-        canTake: attemptsUsed < MAX_ATTEMPTS_PER_EXAM
-      };
-    });
+  const exams = [];
+  for (const e of rows) {
+    if (!courseMatches(candidateCourse, e.course_name)) continue;
+    const status = await getCandidateExamStatus(e.id, req.candidate.id);
+    exams.push({ ...e, ...status });
+  }
   res.json({ exams, attemptsMax: MAX_ATTEMPTS_PER_EXAM });
 });
 
@@ -537,6 +529,26 @@ app.get("/api/exam/admin/attempts", authAdmin, async (req, res) => {
      LIMIT 200`
   );
   res.json({ attempts });
+});
+
+app.get("/api/exam/admin/reschedules", authAdmin, async (req, res) => {
+  const exhausted = await listExhaustedCandidateExams();
+  res.json({ exhausted, attemptsMax: MAX_ATTEMPTS_PER_EXAM });
+});
+
+app.post("/api/exam/admin/reschedules", authAdmin, async (req, res) => {
+  const examId = String(req.body?.exam_id || "").trim();
+  const candidateId = String(req.body?.candidate_id || "").trim();
+  const note = req.body?.note;
+  if (!examId || !candidateId) {
+    return res.status(400).json({ error: "exam_id and candidate_id are required." });
+  }
+  try {
+    const result = await rescheduleCandidateExam(examId, candidateId, note);
+    res.status(201).json(result);
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
 });
 
 app.get("/assets/question-import-template.xlsx", (req, res) => {

@@ -47,6 +47,16 @@ const EXAM_SCHEMA_SQL = `
     );
     CREATE INDEX IF NOT EXISTS idx_attempts_exam ON exam_attempts(exam_id);
     CREATE INDEX IF NOT EXISTS idx_attempts_candidate ON exam_attempts(candidate_id);
+    CREATE TABLE IF NOT EXISTS exam_attempt_resets (
+      id TEXT PRIMARY KEY,
+      exam_id TEXT NOT NULL,
+      candidate_id TEXT NOT NULL,
+      reset_at TEXT NOT NULL,
+      note TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (exam_id) REFERENCES exams(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_attempt_resets_pair ON exam_attempt_resets(exam_id, candidate_id);
     CREATE TABLE IF NOT EXISTS otp_codes (
       email TEXT PRIMARY KEY,
       code_hash TEXT NOT NULL,
