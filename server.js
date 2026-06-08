@@ -6,13 +6,14 @@ const { initDb, getDb, findCandidateByEmail } = require("./db");
 const {
   resolveAdminKey,
   resolveJwtSecret,
-  rateLimitMiddleware,
+  resolveOtpPepper,
   secureCompare,
   hashOtp,
   generateOtp,
   newId,
   isProductionDeploy
 } = require("./lib/security");
+const { rateLimitMiddleware, getRateLimitCount, recordRateLimitHit } = require("./lib/rate-limit-store");
 const {
   signAdminSession,
   verifyAdminSession,
@@ -45,6 +46,7 @@ const {
   rescheduleCandidateExam,
   deliverPassCertificate,
   adminResendResultEmail,
+  recordIntegrityEvent,
   MAX_ATTEMPTS_PER_EXAM
 } = require("./lib/exam-engine");
 const { courseMatches } = require("./lib/course-match");
@@ -64,7 +66,19 @@ function env(name) {
 const PORT = Number(process.env.PORT) || 4010;
 const ADMIN_KEY = resolveAdminKey(env);
 const JWT_SECRET = resolveJwtSecret(env, ADMIN_KEY);
+const OTP_PEPPER = resolveOtpPepper(env, JWT_SECRET);
 const PUBLIC_URL = env("EXAM_PUBLIC_URL") || `http://localhost:${PORT}`;
+
+function hashStudentOtp(code) {
+  return hashOtp(code, OTP_PEPPER);
+}
+
+function respondError(res, e, fallback = "Something went wrong. Please try again.") {
+  const status = Number(e?.status) || 500;
+  if (status >= 500) console.error(e);
+  const message = status >= 500 ? fallback : String(e?.message || fallback);
+  res.status(status).json({ error: message });
+}
 const HOME_URL = env("PORTAL_HOME_URL") || "https://pathwayprep.online";
 
 const COURSES = [
@@ -83,10 +97,16 @@ app.use((req, res, next) => {
   if (PUBLIC_URL.startsWith("https://") || isProductionDeploy()) {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+  );
   next();
 });
 
-const otpLimiter = rateLimitMiddleware("otp", 5, 900000);
+const otpRequestLimiter = rateLimitMiddleware("otp-request", 5, 900000);
+const otpVerifyLimiter = rateLimitMiddleware("otp-verify", 15, 900000);
+const certVerifyLimiter = rateLimitMiddleware("cert-verify", 30, 60000);
 const studentLimiter = rateLimitMiddleware("student", 120, 900000);
 const adminLimiter = rateLimitMiddleware("admin", 60, 900000);
 
@@ -112,28 +132,44 @@ async function authStudent(req, res, next) {
 }
 
 app.get("/health", (req, res) => {
-  const mail = getEmailConfig();
-  let certificateTemplate = null;
+  res.json({ status: "ok", service: "pathway-prep-exams" });
+});
+
+app.get("/api/certificates/:id/verify", certVerifyLimiter, async (req, res) => {
   try {
-    certificateTemplate = ensureTemplateFile();
+    const id = String(req.params.id || "").trim().toUpperCase();
+    if (!/^PP-CERT-[A-F0-9]{8}$/.test(id) && !/^PP-CERT-[A-F0-9]{32}$/.test(id)) {
+      return res.status(400).json({ valid: false, error: "Invalid certificate ID format." });
+    }
+    const row = await getDb().get(
+      `SELECT a.certificate_id, a.score_percent, a.submitted_at, a.passed, a.submit_reason,
+              e.title AS exam_title, e.course_name, c.name AS student_name
+       FROM exam_attempts a
+       JOIN exams e ON e.id = a.exam_id
+       JOIN candidates c ON c.id = a.candidate_id
+       WHERE a.certificate_id = ? AND a.certificate_sent_at IS NOT NULL
+         AND a.passed = 1 AND COALESCE(a.submit_reason, 'review') != 'tab_switch'`,
+      [id]
+    );
+    if (!row) {
+      return res.json({ valid: false });
+    }
+    res.json({
+      valid: true,
+      certificateId: row.certificate_id,
+      holderName: row.student_name,
+      examTitle: row.exam_title,
+      courseName: row.course_name,
+      scorePercent: row.score_percent,
+      issuedAt: row.submitted_at
+    });
   } catch (e) {
-    certificateTemplate = null;
+    respondError(res, e);
   }
-  res.json({
-    status: "ok",
-    service: "pathway-prep-exams",
-    commit: process.env.RENDER_GIT_COMMIT || null,
-    email: {
-      configured: mail.configured,
-      from: mail.from?.email || null,
-      domain: mail.domain || null
-    },
-    certificateTemplate: certificateTemplate ? path.basename(certificateTemplate) : null
-  });
 });
 
 // ─── Student OTP auth ───────────────────────────────────────────────────────
-app.post("/api/exam/student/request-code", otpLimiter, async (req, res) => {
+app.post("/api/exam/student/request-code", otpRequestLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: "Enter a valid email address." });
@@ -150,7 +186,7 @@ app.post("/api/exam/student/request-code", otpLimiter, async (req, res) => {
          code_hash = excluded.code_hash,
          expires_at = excluded.expires_at,
          created_at = excluded.created_at`,
-      [email, hashOtp(code), expires, new Date().toISOString()]
+      [email, hashStudentOtp(code), expires, new Date().toISOString()]
     );
     try {
       await sendOtpEmail(email, code);
@@ -165,16 +201,25 @@ app.post("/api/exam/student/request-code", otpLimiter, async (req, res) => {
   });
 });
 
-app.post("/api/exam/student/verify", otpLimiter, async (req, res) => {
+app.post("/api/exam/student/verify", otpVerifyLimiter, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   const code = String(req.body?.code || "").trim();
   if (!email || !code) return res.status(400).json({ error: "Email and code are required." });
 
+  const failKey = `otp-fail:${email}`;
+  const failWindow = 900000;
+  const failLimit = 10;
+  if ((await getRateLimitCount(failKey, failWindow)) >= failLimit) {
+    return res.status(429).json({ error: "Too many failed attempts. Please wait and try again." });
+  }
+
   const row = await getDb().get("SELECT * FROM otp_codes WHERE email = ?", [email]);
   if (!row || new Date(row.expires_at) < new Date()) {
+    await recordRateLimitHit(failKey, failWindow);
     return res.status(401).json({ error: "Invalid or expired code." });
   }
-  if (!secureCompare(hashOtp(code), row.code_hash)) {
+  if (!secureCompare(hashStudentOtp(code), row.code_hash)) {
+    await recordRateLimitHit(failKey, failWindow);
     return res.status(401).json({ error: "Invalid or expired code." });
   }
 
@@ -226,7 +271,8 @@ app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res)
 
 app.get("/api/exam/student/attempts", studentLimiter, authStudent, async (req, res) => {
   const attempts = await getDb().all(
-    `SELECT a.*, e.title AS exam_title, e.cutoff_percent
+    `SELECT a.id, a.exam_id, a.started_at, a.submitted_at, a.score_percent, a.passed,
+            a.submit_reason, e.title AS exam_title, e.cutoff_percent
      FROM exam_attempts a
      JOIN exams e ON e.id = a.exam_id
      WHERE a.candidate_id = ?
@@ -241,7 +287,7 @@ app.get("/api/exam/student/exams/:id/preview", studentLimiter, authStudent, asyn
     const preview = await getExamPreview(req.params.id, req.candidate);
     res.json(preview);
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    respondError(res, e);
   }
 });
 
@@ -250,7 +296,16 @@ app.post("/api/exam/student/exams/:id/start", studentLimiter, authStudent, async
     const payload = await startAttempt(req.params.id, req.candidate);
     res.json(payload);
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    respondError(res, e);
+  }
+});
+
+app.post("/api/exam/student/attempts/:id/integrity-event", studentLimiter, authStudent, async (req, res) => {
+  try {
+    const result = await recordIntegrityEvent(req.params.id, req.candidate.id);
+    res.json(result);
+  } catch (e) {
+    respondError(res, e);
   }
 });
 
@@ -265,7 +320,7 @@ app.post("/api/exam/student/attempts/:id/answer", studentLimiter, authStudent, a
     );
     res.json(result);
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    respondError(res, e);
   }
 });
 
@@ -276,7 +331,7 @@ app.post("/api/exam/student/attempts/:id/submit", studentLimiter, authStudent, a
     });
     res.json(result);
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    respondError(res, e);
   }
 });
 
@@ -285,7 +340,7 @@ app.get("/api/exam/student/attempts/:id/result", studentLimiter, authStudent, as
     const result = await getAttemptResult(req.params.id, req.candidate.id);
     res.json(result);
   } catch (e) {
-    res.status(e.status || 500).json({ error: e.message });
+    respondError(res, e);
   }
 });
 
@@ -387,6 +442,10 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
   if (!exam) return res.status(404).json({ error: "Exam not found." });
   const body = req.body || {};
   const now = new Date().toISOString();
+  let shuffleMode = null;
+  if (body.shuffle_mode != null) {
+    shuffleMode = body.shuffle_mode === "options_only" ? "options_only" : "questions";
+  }
   await getDb().run(
     `UPDATE exams SET
       title = COALESCE(?, title),
@@ -396,7 +455,6 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
       duration_minutes = COALESCE(?, duration_minutes),
       question_count = COALESCE(?, question_count),
       shuffle_mode = COALESCE(?, shuffle_mode),
-      status = COALESCE(?, status),
       updated_at = ?
      WHERE id = ?`,
     [
@@ -408,8 +466,7 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
         ? Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30))
         : null,
       body.question_count != null ? parseInt(body.question_count, 10) : null,
-      body.shuffle_mode || null,
-      body.status || null,
+      shuffleMode,
       now,
       req.params.id
     ]

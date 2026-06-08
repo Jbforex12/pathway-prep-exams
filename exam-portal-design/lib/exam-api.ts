@@ -70,6 +70,13 @@ export async function saveAnswer(attemptId: string, questionId: string, selected
   })
 }
 
+export async function recordIntegrityEvent(attemptId: string) {
+  return apiFetch<{ ok: boolean; events: number; maxEvents: number; autoSubmit: boolean }>(
+    '/api/exam/student/attempts/' + encodeURIComponent(attemptId) + '/integrity-event',
+    { method: 'POST' },
+  )
+}
+
 export type SubmitReason = 'review' | 'timeout' | 'tab_switch'
 
 export async function submitExam(attemptId: string, submitReason: SubmitReason = 'review') {

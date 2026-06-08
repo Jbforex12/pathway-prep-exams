@@ -162,6 +162,9 @@ async function migrateSchema(db) {
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN submit_reason TEXT");
   await addColumn("ALTER TABLE exams ADD COLUMN published_at TEXT");
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN exam_published_at TEXT");
+  await addColumn(
+    "ALTER TABLE exam_attempts ADD COLUMN integrity_events INTEGER NOT NULL DEFAULT 0"
+  );
   await db.run(
     `UPDATE exams SET published_at = updated_at
      WHERE status = 'published' AND (published_at IS NULL OR published_at = '')`

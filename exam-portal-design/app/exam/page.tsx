@@ -12,6 +12,7 @@ import { Spinner } from '@/components/ui-bits'
 import {
   ApiError,
   getExamPreview,
+  recordIntegrityEvent,
   saveAnswer,
   startExam,
   submitExam,
@@ -21,8 +22,6 @@ import {
 } from '@/lib/exam-api'
 
 type Phase = 'loading' | 'intro' | 'exam' | 'review'
-
-const MAX_TAB_WARNINGS = 2
 
 function ExamInner() {
   const router = useRouter()
@@ -42,7 +41,6 @@ function ExamInner() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [tabWarning, setTabWarning] = useState('')
   const submittedRef = useRef(false)
-  const tabWarningsRef = useRef(0)
 
   const handleSubmit = useCallback(
     async (reason: SubmitReason = 'review') => {
@@ -118,22 +116,28 @@ function ExamInner() {
     if (phase !== 'exam' && phase !== 'review') return
 
     const onVisibility = () => {
-      if (!document.hidden) return
-      tabWarningsRef.current += 1
-      const n = tabWarningsRef.current
-      if (n >= MAX_TAB_WARNINGS) {
-        setTabWarning('Repeated tab switching detected — submitting your exam now.')
-        void handleSubmit('tab_switch')
-      } else {
-        setTabWarning(
-          `Warning ${n}/${MAX_TAB_WARNINGS}: You left the exam window. This is recorded. Stay on this tab or your attempt may be auto-submitted.`,
-        )
-      }
+      if (!document.hidden || !session) return
+      void recordIntegrityEvent(session.attemptId)
+        .then((r) => {
+          if (r.autoSubmit) {
+            setTabWarning('Repeated tab switching detected — submitting your exam now.')
+            void handleSubmit('tab_switch')
+          } else {
+            setTabWarning(
+              `Warning ${r.events}/${r.maxEvents}: You left the exam window. This is recorded. Stay on this tab or your attempt may be auto-submitted.`,
+            )
+          }
+        })
+        .catch(() => {
+          setTabWarning(
+            `Warning: You left the exam window. This is recorded. Stay on this tab or your attempt may be auto-submitted.`,
+          )
+        })
     }
 
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [phase, handleSubmit])
+  }, [phase, session?.attemptId, handleSubmit])
 
   const questions = session?.questions || []
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
