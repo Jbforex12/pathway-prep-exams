@@ -11,6 +11,7 @@ import {
   adminExhaustedExams,
   adminRescheduleExam,
   adminResendCertificate,
+  adminResendResultEmail,
   type AttemptAdminRow,
   type ExhaustedExamRow,
 } from '@/lib/exam-api'
@@ -22,6 +23,7 @@ export default function AdminAttemptsPage() {
   const [exhausted, setExhausted] = useState<ExhaustedExamRow[]>([])
   const [reschedulingId, setReschedulingId] = useState<string | null>(null)
   const [sendingCertId, setSendingCertId] = useState<string | null>(null)
+  const [sendingResultId, setSendingResultId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
   const load = useCallback(() => {
@@ -40,6 +42,24 @@ export default function AdminAttemptsPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  function needsResultEmail(a: AttemptAdminRow) {
+    return !a.passed || a.submit_reason === 'tab_switch'
+  }
+
+  async function sendResultEmail(attemptId: string, label: string) {
+    setSendingResultId(attemptId)
+    setMessage('')
+    try {
+      await adminResendResultEmail(attemptId)
+      setMessage(`Result email sent: ${label}`)
+      await load()
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : 'Result email send failed.')
+    } finally {
+      setSendingResultId(null)
+    }
+  }
 
   async function sendCertificate(attemptId: string, label: string) {
     setSendingCertId(attemptId)
@@ -182,6 +202,22 @@ export default function AdminAttemptsPage() {
                       {sendingCertId === a.id ? 'Sending…' : 'Send certificate'}
                     </button>
                   ) : null}
+                  {needsResultEmail(a) ? (
+                    <button
+                      type="button"
+                      disabled={sendingResultId === a.id}
+                      onClick={() =>
+                        sendResultEmail(a.id, `${a.candidate_name || a.candidate_email} — ${a.exam_title}`)
+                      }
+                      className="mt-3 touch-target inline-flex h-10 items-center justify-center rounded-lg border border-border px-3 text-sm font-semibold text-foreground disabled:opacity-60"
+                    >
+                      {sendingResultId === a.id
+                        ? 'Sending…'
+                        : a.result_email_sent_at
+                          ? 'Resend result email'
+                          : 'Send result email'}
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -196,7 +232,7 @@ export default function AdminAttemptsPage() {
                       <th className="px-4 py-3">Score</th>
                       <th className="px-4 py-3">Result</th>
                       <th className="px-4 py-3">Submitted</th>
-                      <th className="px-4 py-3">Certificate</th>
+                      <th className="px-4 py-3">Emails</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -218,27 +254,58 @@ export default function AdminAttemptsPage() {
                           {a.submitted_at ? new Date(a.submitted_at).toLocaleString() : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          {a.passed ? (
-                            a.certificate_sent_at ? (
-                              <span className="text-xs text-success">Sent</span>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={sendingCertId === a.id}
-                                onClick={() =>
-                                  sendCertificate(
-                                    a.id,
-                                    `${a.candidate_name || a.candidate_email} — ${a.exam_title}`,
-                                  )
-                                }
-                                className="text-sm font-semibold text-primary disabled:opacity-60"
-                              >
-                                {sendingCertId === a.id ? 'Sending…' : 'Send certificate'}
-                              </button>
-                            )
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          <div className="flex flex-col gap-1">
+                            {a.passed ? (
+                              a.certificate_sent_at ? (
+                                <span className="text-xs text-success">Certificate sent</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={sendingCertId === a.id}
+                                  onClick={() =>
+                                    sendCertificate(
+                                      a.id,
+                                      `${a.candidate_name || a.candidate_email} — ${a.exam_title}`,
+                                    )
+                                  }
+                                  className="text-left text-sm font-semibold text-primary disabled:opacity-60"
+                                >
+                                  {sendingCertId === a.id ? 'Sending…' : 'Send certificate'}
+                                </button>
+                              )
+                            ) : null}
+                            {needsResultEmail(a) ? (
+                              a.result_email_sent_at ? (
+                                <button
+                                  type="button"
+                                  disabled={sendingResultId === a.id}
+                                  onClick={() =>
+                                    sendResultEmail(
+                                      a.id,
+                                      `${a.candidate_name || a.candidate_email} — ${a.exam_title}`,
+                                    )
+                                  }
+                                  className="text-left text-xs font-semibold text-muted-foreground disabled:opacity-60"
+                                >
+                                  {sendingResultId === a.id ? 'Sending…' : 'Resend result email'}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={sendingResultId === a.id}
+                                  onClick={() =>
+                                    sendResultEmail(
+                                      a.id,
+                                      `${a.candidate_name || a.candidate_email} — ${a.exam_title}`,
+                                    )
+                                  }
+                                  className="text-left text-sm font-semibold text-primary disabled:opacity-60"
+                                >
+                                  {sendingResultId === a.id ? 'Sending…' : 'Send result email'}
+                                </button>
+                              )
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -172,6 +172,13 @@ export async function adminResendCertificate(attemptId: string) {
   )
 }
 
+export async function adminResendResultEmail(attemptId: string) {
+  return apiFetch<{ ok: boolean; resultEmailSent: boolean; alreadySent?: boolean }>(
+    '/api/exam/admin/attempts/' + encodeURIComponent(attemptId) + '/resend-result-email',
+    { method: 'POST' },
+  )
+}
+
 export type ExamRow = {
   id: string
   title: string
@@ -217,6 +224,7 @@ export type AttemptAdminRow = AttemptRow & {
   candidate_email?: string
   cutoff_percent?: number
   certificate_sent_at?: string | null
+  result_email_sent_at?: string | null
   submit_reason?: string | null
 }
 

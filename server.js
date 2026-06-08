@@ -44,6 +44,7 @@ const {
   parseOptions,
   rescheduleCandidateExam,
   deliverPassCertificate,
+  adminResendResultEmail,
   MAX_ATTEMPTS_PER_EXAM
 } = require("./lib/exam-engine");
 const { courseMatches } = require("./lib/course-match");
@@ -717,6 +718,15 @@ app.post("/api/exam/admin/attempts/:id/resend-certificate", authAdmin, async (re
     return res.status(500).json({ error: result.error || "Certificate send failed." });
   }
   res.json({ ok: true, certificateSent: true, alreadySent: !!result.alreadySent });
+});
+
+app.post("/api/exam/admin/attempts/:id/resend-result-email", authAdmin, async (req, res) => {
+  try {
+    const result = await adminResendResultEmail(req.params.id, { force: true });
+    res.json({ ok: true, resultEmailSent: true, alreadySent: !!result.alreadySent });
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
 });
 
 app.get("/assets/question-import-template.xlsx", (req, res) => {
