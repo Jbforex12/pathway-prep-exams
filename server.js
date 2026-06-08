@@ -35,7 +35,8 @@ const {
   getAttemptResult,
   getExamById,
   listQuestionsForExam,
-  parseOptions
+  parseOptions,
+  MAX_ATTEMPTS_PER_EXAM
 } = require("./lib/exam-engine");
 const { courseMatches } = require("./lib/course-match");
 const { parseExcelBuffer } = require("./lib/import-excel");
@@ -194,8 +195,18 @@ app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res)
      ORDER BY e.created_at DESC`,
     [req.candidate.id]
   );
-  const exams = rows.filter((e) => courseMatches(candidateCourse, e.course_name));
-  res.json({ exams });
+  const exams = rows
+    .filter((e) => courseMatches(candidateCourse, e.course_name))
+    .map((e) => {
+      const attemptsUsed = Number(e.completed) || 0;
+      return {
+        ...e,
+        attemptsUsed,
+        attemptsMax: MAX_ATTEMPTS_PER_EXAM,
+        canTake: attemptsUsed < MAX_ATTEMPTS_PER_EXAM
+      };
+    });
+  res.json({ exams, attemptsMax: MAX_ATTEMPTS_PER_EXAM });
 });
 
 app.get("/api/exam/student/attempts", studentLimiter, authStudent, async (req, res) => {

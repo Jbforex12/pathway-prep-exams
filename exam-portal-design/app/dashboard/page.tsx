@@ -85,17 +85,20 @@ export default function DashboardPage() {
                       </span>
                       <span>{exam.question_count} questions</span>
                       <span>Pass: {exam.cutoff_percent}%</span>
+                      <span>
+                        Attempts: {exam.attemptsUsed ?? 0} / {exam.attemptsMax ?? 2}
+                      </span>
                     </p>
                   </div>
-                  {exam.completed ? (
-                    <span className="text-sm font-medium text-success">Completed</span>
+                  {exam.canTake === false ? (
+                    <span className="text-sm font-medium text-muted-foreground">No attempts left</span>
                   ) : (
                     <Link
                       href={`/exam/?id=${encodeURIComponent(exam.id)}`}
                       className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
                     >
                       <PlayCircle className="size-4" />
-                      Start exam
+                      {(exam.attemptsUsed ?? 0) > 0 ? 'Retake exam' : 'Start exam'}
                     </Link>
                   )}
                 </div>

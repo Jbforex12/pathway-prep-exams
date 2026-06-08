@@ -152,7 +152,9 @@ export type ExamRow = {
   duration_minutes: number
   question_count: number
   cutoff_percent: number
-  completed?: number
+  attemptsUsed?: number
+  attemptsMax?: number
+  canTake?: boolean
 }
 
 export type ExamAdminRow = ExamRow & {
@@ -208,5 +210,8 @@ export type ExamResult = {
   total: number
   certificateSent?: boolean
   resultEmailSent?: boolean
+  attemptNumber?: number
+  attemptsMax?: number
+  canRetake?: boolean
   submittedAt: string
 }

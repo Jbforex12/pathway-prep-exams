@@ -54,6 +54,11 @@ function ResultInner() {
         <p className="mt-2 text-sm text-muted-foreground">
           {result.correct} of {result.total} correct · Pass mark {result.cutoffPercent}%
         </p>
+        {result.attemptNumber ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Attempt {result.attemptNumber} of {result.attemptsMax ?? 2}
+          </p>
+        ) : null}
         {result.passed && result.certificateSent ? (
           <p className="mt-4 inline-flex items-center justify-center gap-2 text-sm text-success">
             <Award className="size-4" />
@@ -64,6 +69,9 @@ function ResultInner() {
           <p className="mt-4 text-sm text-muted-foreground">
             A summary of your result has been sent to your email.
           </p>
+        ) : null}
+        {result.canRetake ? (
+          <p className="mt-4 text-sm text-muted-foreground">You have one retake available from your dashboard.</p>
         ) : null}
         <Link href="/dashboard/" className="mt-8 inline-flex h-10 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">
           Back to dashboard
