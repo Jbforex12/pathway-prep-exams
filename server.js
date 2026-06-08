@@ -27,7 +27,8 @@ const {
   clearStudentSessionCookie,
   readStudentSessionToken
 } = require("./lib/exam-session");
-const { sendOtpEmail, getEmailConfig } = require("./lib/email");
+const { sendOtpEmail, sendExamCertificateEmail, getEmailConfig } = require("./lib/email");
+const { generateExamCertificatePdf } = require("./lib/exam-certificate");
 const { ensureTemplateFile } = require("./lib/certificate-pdf");
 const {
   startAttempt,
@@ -108,7 +109,24 @@ async function authStudent(req, res, next) {
 }
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", service: "pathway-prep-exams" });
+  const mail = getEmailConfig();
+  let certificateTemplate = null;
+  try {
+    certificateTemplate = ensureTemplateFile();
+  } catch (e) {
+    certificateTemplate = null;
+  }
+  res.json({
+    status: "ok",
+    service: "pathway-prep-exams",
+    commit: process.env.RENDER_GIT_COMMIT || null,
+    email: {
+      configured: mail.configured,
+      from: mail.from?.email || null,
+      domain: mail.domain || null
+    },
+    certificateTemplate: certificateTemplate ? path.basename(certificateTemplate) : null
+  });
 });
 
 // ─── Student OTP auth ───────────────────────────────────────────────────────
@@ -520,6 +538,60 @@ app.post("/api/exam/admin/exams/:id/import/excel", authAdmin, async (req, res) =
   }
 });
 
+app.get("/api/exam/admin/email/status", authAdmin, (req, res) => {
+  const email = getEmailConfig();
+  let certificateTemplate = null;
+  try {
+    certificateTemplate = ensureTemplateFile();
+  } catch (e) {
+    certificateTemplate = null;
+  }
+  res.json({
+    configured: email.configured,
+    apiKeySet: email.apiKeySet,
+    from: email.fromDisplay,
+    domain: email.domain,
+    replyTo: email.replyTo,
+    brand: email.brand,
+    sandboxOnly: email.sandboxOnly,
+    sandboxNote: email.sandboxNote,
+    certificateTemplate: certificateTemplate ? path.basename(certificateTemplate) : null
+  });
+});
+
+app.post("/api/exam/admin/email/test-certificate", authAdmin, async (req, res) => {
+  const to = String(req.body?.to || "").trim().toLowerCase();
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    return res.status(400).json({ error: "Valid recipient email required." });
+  }
+  try {
+    const { buffer: pdfBuffer, filename: pdfFilename } = await generateExamCertificatePdf({
+      studentName: "Test Candidate",
+      examTitle: "Sample Exam",
+      courseName: "Health Care Assistant"
+    });
+    const result = await sendExamCertificateEmail({
+      to,
+      studentName: "Test Candidate",
+      examTitle: "Sample Exam",
+      scorePercent: 85,
+      cutoffPercent: 70,
+      pdfBuffer,
+      pdfFilename
+    });
+    res.json({
+      ok: true,
+      message: result.dev
+        ? "Dev mode: logged to console (set RESEND_API_KEY to send for real)."
+        : `Test certificate email sent to ${to}.`,
+      messageId: result.id || null
+    });
+  } catch (e) {
+    console.error("Certificate email test failed:", e.message);
+    res.status(503).json({ error: e.message });
+  }
+});
+
 app.get("/api/exam/admin/attempts", authAdmin, async (req, res) => {
   const attempts = await getDb().all(
     `SELECT a.*, e.title AS exam_title, c.name AS candidate_name, c.email AS candidate_email
@@ -578,7 +650,8 @@ app.post("/api/exam/admin/attempts/:id/resend-certificate", authAdmin, async (re
       name: row.candidate_name,
       email: row.candidate_email
     },
-    scorePercent: row.score_percent
+    scorePercent: row.score_percent,
+    forceResend: true
   });
   if (!result.certificateSent) {
     return res.status(500).json({ error: result.error || "Certificate send failed." });
