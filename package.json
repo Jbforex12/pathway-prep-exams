@@ -14,6 +14,7 @@
     "template:build": "node scripts/build-import-template.js",
     "cert:build-template": "node scripts/build-certificate-template.js",
     "migrate:exam-titles": "node scripts/migrate-exam-titles.js",
+    "test:cert-email": "node scripts/test-certificate-email.js",
     "postinstall": "npm run cert:build-template && npm run template:build && npm run exam:install"
   },
   "dependencies": {
