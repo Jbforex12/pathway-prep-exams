@@ -274,23 +274,33 @@ function QuestionsInner() {
               }}
             />
           </label>
-          {exam.status !== 'published' ? (
-            <button
-              type="button"
-              disabled={publishing || pool < 1}
-              onClick={() => void publish()}
-              className="touch-target h-12 w-full rounded-lg border border-primary bg-primary/10 px-4 text-sm font-semibold text-primary disabled:opacity-40 sm:h-auto sm:w-auto"
-            >
-              {publishing ? 'Publishing…' : 'Publish exam'}
-            </button>
-          ) : (
-            <span className="inline-flex items-center rounded-lg bg-muted px-4 py-2 text-sm font-medium text-muted-foreground">
+          {exam.status === 'published' ? (
+            <span className="inline-flex items-center rounded-lg bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
               Published
             </span>
-          )}
+          ) : null}
+          <button
+            type="button"
+            disabled={publishing || pool < 1}
+            onClick={() => void publish()}
+            className="touch-target h-12 w-full rounded-lg border border-primary bg-primary/10 px-4 text-sm font-semibold text-primary disabled:opacity-40 sm:h-auto sm:w-auto"
+          >
+            {publishing
+              ? exam.status === 'published'
+                ? 'Republishing…'
+                : 'Publishing…'
+              : exam.status === 'published'
+                ? 'Republish changes'
+                : 'Publish exam'}
+          </button>
         </div>
         {pool < 1 ? (
           <p className="mt-3 text-xs text-muted-foreground">Add or import at least one question to enable publishing.</p>
+        ) : exam.status === 'published' ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            After editing questions, timer, or settings, click <strong>Republish changes</strong> so new student attempts
+            use the updated pool and configuration. Attempts already in progress are not affected.
+          </p>
         ) : null}
       </div>
 

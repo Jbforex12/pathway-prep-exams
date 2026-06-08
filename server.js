@@ -440,7 +440,13 @@ app.post("/api/exam/admin/exams/:id/publish", authAdmin, async (req, res) => {
     "UPDATE exams SET status = 'published', question_count = ?, updated_at = ? WHERE id = ?",
     [perAttempt, now, req.params.id]
   );
-  res.json({ exam: await getExamById(req.params.id), message: `Published with ${perAttempt} question(s) per attempt.` });
+  const wasPublished = exam.status === "published";
+  res.json({
+    exam: await getExamById(req.params.id),
+    message: wasPublished
+      ? `Republished — ${perAttempt} question(s) per attempt for new tries.`
+      : `Published with ${perAttempt} question(s) per attempt.`
+  });
 });
 
 // ─── Admin questions ──────────────────────────────────────────────────────────
