@@ -12,6 +12,7 @@
     "exam:install": "npm install --prefix exam-portal-design",
     "exam:build": "npm run build --prefix exam-portal-design",
     "template:build": "node scripts/build-import-template.js",
+    "migrate:exam-titles": "node scripts/migrate-exam-titles.js",
     "postinstall": "npm run template:build && npm run exam:install"
   },
   "dependencies": {

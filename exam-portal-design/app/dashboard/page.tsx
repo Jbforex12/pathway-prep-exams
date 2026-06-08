@@ -15,6 +15,7 @@ import {
   type AttemptRow,
   type ExamRow,
 } from '@/lib/exam-api'
+import { formatCourse, titleCase } from '@/lib/format'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -69,8 +70,10 @@ export default function DashboardPage() {
         </div>
       </header>
       <main className="safe-px safe-pb mx-auto max-w-4xl py-5 sm:py-8">
-        <h1 className="font-heading text-xl font-semibold break-words sm:text-2xl">Welcome, {name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground break-words">Course: {course || 'Not set'}</p>
+        <h1 className="font-heading text-xl font-semibold break-words sm:text-2xl">Welcome, {titleCase(name)}</h1>
+        <p className="mt-1 text-sm text-muted-foreground break-words">
+          Course: {course ? formatCourse(course) : 'Not set'}
+        </p>
 
         <section className="mt-6 sm:mt-8">
           <h2 className="text-sm font-semibold tracking-wide text-primary uppercase">Available exams</h2>

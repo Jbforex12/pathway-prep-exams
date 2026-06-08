@@ -317,13 +317,15 @@ app.post("/api/exam/admin/exams", authAdmin, async (req, res) => {
   }
   const id = newId("exam");
   const now = new Date().toISOString();
+  const code = body.code ? String(body.code).trim().toUpperCase() : null;
   await getDb().run(
     `INSERT INTO exams
-     (id, title, course_name, cutoff_percent, duration_minutes, question_count, shuffle_mode, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+     (id, title, code, course_name, cutoff_percent, duration_minutes, question_count, shuffle_mode, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
     [
       id,
       title,
+      code,
       course_name,
       Math.min(100, Math.max(0, parseInt(body.cutoff_percent, 10) || 70)),
       Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30)),
@@ -362,6 +364,7 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
   await getDb().run(
     `UPDATE exams SET
       title = COALESCE(?, title),
+      code = COALESCE(?, code),
       course_name = COALESCE(?, course_name),
       cutoff_percent = COALESCE(?, cutoff_percent),
       duration_minutes = COALESCE(?, duration_minutes),
@@ -372,6 +375,7 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
      WHERE id = ?`,
     [
       body.title ? String(body.title).trim() : null,
+      body.code != null ? String(body.code).trim().toUpperCase() || null : null,
       body.course_name ? String(body.course_name).trim() : null,
       body.cutoff_percent != null ? parseInt(body.cutoff_percent, 10) : null,
       body.duration_minutes != null

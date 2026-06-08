@@ -148,6 +148,7 @@ export async function adminAttempts() {
 export type ExamRow = {
   id: string
   title: string
+  code?: string | null
   course_name: string
   duration_minutes: number
   question_count: number

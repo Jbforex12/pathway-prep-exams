@@ -7,6 +7,7 @@ const EXAM_SCHEMA_SQL = `
     CREATE TABLE IF NOT EXISTS exams (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
+      code TEXT,
       course_name TEXT NOT NULL,
       cutoff_percent INTEGER NOT NULL DEFAULT 70,
       duration_minutes INTEGER NOT NULL DEFAULT 30,
@@ -147,6 +148,7 @@ async function migrateSchema(db) {
   );
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN duration_minutes INTEGER");
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN result_email_sent_at TEXT");
+  await addColumn("ALTER TABLE exams ADD COLUMN code TEXT");
 }
 
 async function initDb(dataDir) {
