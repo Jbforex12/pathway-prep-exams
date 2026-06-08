@@ -81,7 +81,7 @@ export default function DashboardPage() {
                     <p className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3.5" />
-                        {exam.duration_minutes} min
+                        {exam.duration_minutes} min timer
                       </span>
                       <span>{exam.question_count} questions</span>
                       <span>Pass: {exam.cutoff_percent}%</span>

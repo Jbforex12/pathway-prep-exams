@@ -314,7 +314,7 @@ app.post("/api/exam/admin/exams", authAdmin, async (req, res) => {
       title,
       course_name,
       Math.min(100, Math.max(0, parseInt(body.cutoff_percent, 10) || 70)),
-      Math.max(5, parseInt(body.duration_minutes, 10) || 60),
+      Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30)),
       Math.max(1, parseInt(body.question_count, 10) || 10),
       body.shuffle_mode === "options_only" ? "options_only" : "questions",
       now,
@@ -362,7 +362,9 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
       body.title ? String(body.title).trim() : null,
       body.course_name ? String(body.course_name).trim() : null,
       body.cutoff_percent != null ? parseInt(body.cutoff_percent, 10) : null,
-      body.duration_minutes != null ? parseInt(body.duration_minutes, 10) : null,
+      body.duration_minutes != null
+        ? Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30))
+        : null,
       body.question_count != null ? parseInt(body.question_count, 10) : null,
       body.shuffle_mode || null,
       body.status || null,

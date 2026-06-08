@@ -9,7 +9,7 @@ const EXAM_SCHEMA_SQL = `
       title TEXT NOT NULL,
       course_name TEXT NOT NULL,
       cutoff_percent INTEGER NOT NULL DEFAULT 70,
-      duration_minutes INTEGER NOT NULL DEFAULT 60,
+      duration_minutes INTEGER NOT NULL DEFAULT 30,
       question_count INTEGER NOT NULL DEFAULT 20,
       shuffle_mode TEXT NOT NULL DEFAULT 'questions',
       status TEXT NOT NULL DEFAULT 'draft',
@@ -33,6 +33,7 @@ const EXAM_SCHEMA_SQL = `
       exam_id TEXT NOT NULL,
       candidate_id TEXT NOT NULL,
       started_at TEXT NOT NULL,
+      duration_minutes INTEGER,
       submitted_at TEXT,
       score_percent INTEGER,
       passed INTEGER,
@@ -144,6 +145,7 @@ async function migrateSchema(db) {
   await addColumn(
     "ALTER TABLE questions ADD COLUMN question_type TEXT NOT NULL DEFAULT 'multiple_choice'"
   );
+  await addColumn("ALTER TABLE exam_attempts ADD COLUMN duration_minutes INTEGER");
 }
 
 async function initDb(dataDir) {
