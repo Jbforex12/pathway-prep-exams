@@ -27,12 +27,23 @@ git push -u origin main
 
 4. Deploy → verify `https://YOUR-SERVICE.onrender.com/health`
 
-## 3. Custom domain
+## 3. Custom domain (free tier — avoid “SERVICE WAKING UP”)
 
-**Option A — subdomain (recommended):** `exams.pathwayprep.online`
+Render **free** services sleep after ~15 minutes idle and show a cold-start splash for 30–60s.
+Use **Netlify for the UI** (free, always on) and keep **Render for the API only**:
 
-- Render → service → Settings → Custom Domains → add `exams.pathwayprep.online`
-- Hostinger DNS: CNAME `exams` → your Render target
+1. **Netlify** → New site → connect `pathway-prep-exams` repo (uses root `netlify.toml`)
+2. **Hostinger DNS:** CNAME `exams` → your Netlify site (e.g. `something.netlify.app`), **not** Render
+3. **Render:** remove `exams.pathwayprep.online` custom domain if added; keep `pathway-prep-exams.onrender.com` for API proxy target
+4. GitHub Action **Keep exams warm** pings `/health` every 5 minutes (already in repo)
+
+Students load pages from Netlify instantly; the app shows “Starting exam portal…” while `/health` wakes Render.
+
+**Optional (extra free backup):** [UptimeRobot](https://uptimerobot.com) monitor `https://pathway-prep-exams.onrender.com/health` every 5 minutes.
+
+**Option A — subdomain (recommended):** `exams.pathwayprep.online` → Netlify (see above)
+
+**Legacy (Render-only domain):** CNAME `exams` → Render — works but students see Render’s wake-up splash
 
 **Option B — path on main site:** `pathwayprep.online/exams`
 

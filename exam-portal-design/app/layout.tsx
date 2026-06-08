@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { ServiceWake } from '@/components/service-wake'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -17,7 +18,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="bg-background">
-      <body className="min-h-dvh overflow-x-hidden font-sans antialiased">{children}</body>
+      <body className="min-h-dvh overflow-x-hidden font-sans antialiased">
+        <ServiceWake>{children}</ServiceWake>
+      </body>
     </html>
   )
 }

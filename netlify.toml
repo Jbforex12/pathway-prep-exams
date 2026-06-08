@@ -1,0 +1,17 @@
+# Free-tier fix: serve the static exam UI from Netlify (always instant),
+# proxy API + health checks to Render so the backend can sleep less often.
+[build]
+  command = "npm install && npm run exam:build"
+  publish = "exam-portal-design/out"
+
+[[redirects]]
+  from = "/api/exam/*"
+  to = "https://pathway-prep-exams.onrender.com/api/exam/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "https://pathway-prep-exams.onrender.com/health"
+  status = 200
+  force = true
