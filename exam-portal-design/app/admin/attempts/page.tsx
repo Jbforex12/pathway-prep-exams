@@ -10,6 +10,7 @@ import {
   adminAttempts,
   adminExhaustedExams,
   adminRescheduleExam,
+  adminResendCertificate,
   type AttemptAdminRow,
   type ExhaustedExamRow,
 } from '@/lib/exam-api'
@@ -20,6 +21,7 @@ export default function AdminAttemptsPage() {
   const [attempts, setAttempts] = useState<AttemptAdminRow[]>([])
   const [exhausted, setExhausted] = useState<ExhaustedExamRow[]>([])
   const [reschedulingId, setReschedulingId] = useState<string | null>(null)
+  const [sendingCertId, setSendingCertId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
   const load = useCallback(() => {
@@ -38,6 +40,20 @@ export default function AdminAttemptsPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  async function sendCertificate(attemptId: string, label: string) {
+    setSendingCertId(attemptId)
+    setMessage('')
+    try {
+      await adminResendCertificate(attemptId)
+      setMessage(`Certificate sent: ${label}`)
+      await load()
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : 'Certificate send failed.')
+    } finally {
+      setSendingCertId(null)
+    }
+  }
 
   async function reschedule(row: ExhaustedExamRow) {
     const key = `${row.candidate_id}:${row.exam_id}`
@@ -144,13 +160,25 @@ export default function AdminAttemptsPage() {
                   <p className="mt-2 text-xs text-muted-foreground">
                     {a.submitted_at ? new Date(a.submitted_at).toLocaleString() : '—'}
                   </p>
+                  {a.passed && !a.certificate_sent_at ? (
+                    <button
+                      type="button"
+                      disabled={sendingCertId === a.id}
+                      onClick={() =>
+                        sendCertificate(a.id, `${a.candidate_name || a.candidate_email} — ${a.exam_title}`)
+                      }
+                      className="mt-3 touch-target inline-flex h-10 items-center justify-center rounded-lg border border-primary px-3 text-sm font-semibold text-primary disabled:opacity-60"
+                    >
+                      {sendingCertId === a.id ? 'Sending…' : 'Send certificate'}
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
 
             <div className="mt-3 hidden overflow-hidden rounded-xl border border-border bg-card md:block">
               <div className="mobile-scroll-x md:overflow-visible md:p-0">
-                <table className="min-w-[720px] w-full text-left text-sm md:min-w-0">
+                <table className="min-w-[900px] w-full text-left text-sm md:min-w-0">
                   <thead className="border-b border-border bg-muted/50 text-xs uppercase text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3">Student</th>
@@ -158,6 +186,7 @@ export default function AdminAttemptsPage() {
                       <th className="px-4 py-3">Score</th>
                       <th className="px-4 py-3">Result</th>
                       <th className="px-4 py-3">Submitted</th>
+                      <th className="px-4 py-3">Certificate</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -172,6 +201,29 @@ export default function AdminAttemptsPage() {
                         <td className="px-4 py-3">{a.passed ? 'Passed' : 'Failed'}</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {a.submitted_at ? new Date(a.submitted_at).toLocaleString() : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {a.passed ? (
+                            a.certificate_sent_at ? (
+                              <span className="text-xs text-success">Sent</span>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={sendingCertId === a.id}
+                                onClick={() =>
+                                  sendCertificate(
+                                    a.id,
+                                    `${a.candidate_name || a.candidate_email} — ${a.exam_title}`,
+                                  )
+                                }
+                                className="text-sm font-semibold text-primary disabled:opacity-60"
+                              >
+                                {sendingCertId === a.id ? 'Sending…' : 'Send certificate'}
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

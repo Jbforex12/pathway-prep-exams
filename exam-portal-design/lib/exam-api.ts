@@ -156,6 +156,13 @@ export async function adminRescheduleExam(body: { exam_id: string; candidate_id:
   })
 }
 
+export async function adminResendCertificate(attemptId: string) {
+  return apiFetch<{ ok: boolean; certificateSent: boolean; alreadySent?: boolean }>(
+    '/api/exam/admin/attempts/' + encodeURIComponent(attemptId) + '/resend-certificate',
+    { method: 'POST' },
+  )
+}
+
 export type ExamRow = {
   id: string
   title: string
@@ -198,6 +205,7 @@ export type AttemptAdminRow = AttemptRow & {
   candidate_name?: string
   candidate_email?: string
   cutoff_percent?: number
+  certificate_sent_at?: string | null
 }
 
 export type ExhaustedExamRow = {

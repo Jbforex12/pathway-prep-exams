@@ -39,6 +39,7 @@ const {
   listQuestionsForExam,
   parseOptions,
   rescheduleCandidateExam,
+  deliverPassCertificate,
   MAX_ATTEMPTS_PER_EXAM
 } = require("./lib/exam-engine");
 const { courseMatches } = require("./lib/course-match");
@@ -549,6 +550,38 @@ app.post("/api/exam/admin/reschedules", authAdmin, async (req, res) => {
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
   }
+});
+
+app.post("/api/exam/admin/attempts/:id/resend-certificate", authAdmin, async (req, res) => {
+  const row = await getDb().get(
+    `SELECT a.*, c.name AS candidate_name, c.email AS candidate_email
+     FROM exam_attempts a
+     LEFT JOIN candidates c ON c.id = a.candidate_id
+     WHERE a.id = ?`,
+    [req.params.id]
+  );
+  if (!row || !row.submitted_at) {
+    return res.status(404).json({ error: "Submitted attempt not found." });
+  }
+  if (!row.passed) {
+    return res.status(400).json({ error: "Certificate is only sent for passing attempts." });
+  }
+  const exam = await getExamById(row.exam_id);
+  if (!exam) return res.status(404).json({ error: "Exam not found." });
+  const result = await deliverPassCertificate({
+    attemptId: row.id,
+    exam,
+    candidateRow: {
+      id: row.candidate_id,
+      name: row.candidate_name,
+      email: row.candidate_email
+    },
+    scorePercent: row.score_percent
+  });
+  if (!result.certificateSent) {
+    return res.status(500).json({ error: result.error || "Certificate send failed." });
+  }
+  res.json({ ok: true, certificateSent: true, alreadySent: !!result.alreadySent });
 });
 
 app.get("/assets/question-import-template.xlsx", (req, res) => {
