@@ -60,6 +60,11 @@ function ResultInner() {
             Certificate sent to your email
           </p>
         ) : null}
+        {!result.passed && result.resultEmailSent ? (
+          <p className="mt-4 text-sm text-muted-foreground">
+            A summary of your result has been sent to your email.
+          </p>
+        ) : null}
         <Link href="/dashboard/" className="mt-8 inline-flex h-10 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">
           Back to dashboard
         </Link>

@@ -207,5 +207,6 @@ export type ExamResult = {
   correct: number
   total: number
   certificateSent?: boolean
+  resultEmailSent?: boolean
   submittedAt: string
 }

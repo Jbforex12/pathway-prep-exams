@@ -146,6 +146,7 @@ async function migrateSchema(db) {
     "ALTER TABLE questions ADD COLUMN question_type TEXT NOT NULL DEFAULT 'multiple_choice'"
   );
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN duration_minutes INTEGER");
+  await addColumn("ALTER TABLE exam_attempts ADD COLUMN result_email_sent_at TEXT");
 }
 
 async function initDb(dataDir) {

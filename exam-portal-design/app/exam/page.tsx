@@ -100,6 +100,12 @@ function ExamInner() {
     const next = { ...answers, [current.id]: optionIndex }
     setAnswers(next)
     await saveAnswer(session.attemptId, current.id, optionIndex)
+
+    if (index < questions.length - 1) {
+      window.setTimeout(() => {
+        setIndex((i) => Math.min(questions.length - 1, i + 1))
+      }, 350)
+    }
   }
 
   if (loading) {
