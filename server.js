@@ -269,7 +269,9 @@ app.post("/api/exam/student/attempts/:id/answer", studentLimiter, authStudent, a
 
 app.post("/api/exam/student/attempts/:id/submit", studentLimiter, authStudent, async (req, res) => {
   try {
-    const result = await submitAttempt(req.params.id, req.candidate.id, req.candidate);
+    const result = await submitAttempt(req.params.id, req.candidate.id, req.candidate, {
+      submitReason: req.body?.submitReason
+    });
     res.json(result);
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message });
@@ -621,7 +623,7 @@ app.get("/api/exam/admin/attempts", authAdmin, async (req, res) => {
 
 app.get("/api/exam/admin/attempts/export", authAdmin, async (req, res) => {
   const attempts = await getDb().all(
-    `SELECT a.score_percent, a.passed, a.submitted_at, a.started_at,
+    `SELECT a.score_percent, a.passed, a.submitted_at, a.started_at, a.submit_reason,
             e.title AS exam_title, c.name AS candidate_name, c.email AS candidate_email
      FROM exam_attempts a
      JOIN exams e ON e.id = a.exam_id
@@ -631,7 +633,7 @@ app.get("/api/exam/admin/attempts/export", authAdmin, async (req, res) => {
   );
   const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [
-    "Student,Email,Exam,Score,Result,Submitted,Started",
+    "Student,Email,Exam,Score,Result,Submit reason,Submitted,Started",
     ...attempts.map((a) =>
       [
         esc(a.candidate_name),
@@ -639,6 +641,7 @@ app.get("/api/exam/admin/attempts/export", authAdmin, async (req, res) => {
         esc(a.exam_title),
         esc(a.score_percent),
         esc(a.passed ? "Passed" : "Failed"),
+        esc(a.submit_reason || "review"),
         esc(a.submitted_at),
         esc(a.started_at)
       ].join(",")

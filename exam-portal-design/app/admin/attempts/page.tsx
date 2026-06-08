@@ -164,6 +164,7 @@ export default function AdminAttemptsPage() {
                     <span className="text-xl font-bold text-primary">{a.score_percent}%</span>
                     <span className={a.passed ? 'text-success' : 'text-destructive'}>
                       {a.passed ? 'Passed' : 'Failed'}
+                      {a.submit_reason === 'tab_switch' ? ' · Integrity' : ''}
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
@@ -207,7 +208,12 @@ export default function AdminAttemptsPage() {
                         </td>
                         <td className="px-4 py-3">{a.exam_title}</td>
                         <td className="px-4 py-3">{a.score_percent}%</td>
-                        <td className="px-4 py-3">{a.passed ? 'Passed' : 'Failed'}</td>
+                        <td className="px-4 py-3">
+                          {a.passed ? 'Passed' : 'Failed'}
+                          {a.submit_reason === 'tab_switch' ? (
+                            <span className="ml-1 text-xs text-destructive">(tab switch)</span>
+                          ) : null}
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {a.submitted_at ? new Date(a.submitted_at).toLocaleString() : '—'}
                         </td>

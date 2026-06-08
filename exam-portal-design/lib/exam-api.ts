@@ -70,8 +70,13 @@ export async function saveAnswer(attemptId: string, questionId: string, selected
   })
 }
 
-export async function submitExam(attemptId: string) {
-  return apiFetch<ExamResult>('/api/exam/student/attempts/' + encodeURIComponent(attemptId) + '/submit', { method: 'POST' })
+export type SubmitReason = 'review' | 'timeout' | 'tab_switch'
+
+export async function submitExam(attemptId: string, submitReason: SubmitReason = 'review') {
+  return apiFetch<ExamResult>('/api/exam/student/attempts/' + encodeURIComponent(attemptId) + '/submit', {
+    method: 'POST',
+    body: JSON.stringify({ submitReason }),
+  })
 }
 
 export async function getResult(attemptId: string) {
@@ -210,6 +215,7 @@ export type AttemptAdminRow = AttemptRow & {
   candidate_email?: string
   cutoff_percent?: number
   certificate_sent_at?: string | null
+  submit_reason?: string | null
 }
 
 export type ExhaustedExamRow = {
@@ -260,6 +266,8 @@ export type ExamResult = {
   total: number
   certificateSent?: boolean
   resultEmailSent?: boolean
+  submitReason?: SubmitReason | string
+  integrityViolation?: boolean
   attemptNumber?: number
   attemptsMax?: number
   canRetake?: boolean

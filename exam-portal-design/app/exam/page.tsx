@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Clock, Send } from 'lucide-react'
+import { ExamAntiAiBanner, ProtectedExamPrompt } from '@/components/exam/exam-anti-ai-shield'
 import { ExamWatermark } from '@/components/exam/exam-watermark'
 import { PreExamModal } from '@/components/exam/pre-exam-modal'
 import { QuestionPalette, QuestionPaletteButton } from '@/components/exam/question-palette'
@@ -16,6 +17,7 @@ import {
   submitExam,
   type ExamPreview,
   type ExamSession,
+  type SubmitReason,
 } from '@/lib/exam-api'
 
 type Phase = 'loading' | 'intro' | 'exam' | 'review'
@@ -43,12 +45,12 @@ function ExamInner() {
   const tabWarningsRef = useRef(0)
 
   const handleSubmit = useCallback(
-    async (auto = false) => {
+    async (reason: SubmitReason = 'review') => {
       if (!session || submitting || submittedRef.current) return
       submittedRef.current = true
       setSubmitting(true)
       try {
-        await submitExam(session.attemptId)
+        await submitExam(session.attemptId, reason)
         router.replace(`/result/?id=${encodeURIComponent(session.attemptId)}`)
       } catch (err) {
         submittedRef.current = false
@@ -103,7 +105,7 @@ function ExamInner() {
       setSecondsLeft(left)
       if (left <= 0) {
         setTimesUp(true)
-        void handleSubmit(true)
+        void handleSubmit('timeout')
       }
     }
 
@@ -121,7 +123,7 @@ function ExamInner() {
       const n = tabWarningsRef.current
       if (n >= MAX_TAB_WARNINGS) {
         setTabWarning('Repeated tab switching detected — submitting your exam now.')
-        void handleSubmit(true)
+        void handleSubmit('tab_switch')
       } else {
         setTabWarning(
           `Warning ${n}/${MAX_TAB_WARNINGS}: You left the exam window. This is recorded. Stay on this tab or your attempt may be auto-submitted.`,
@@ -223,7 +225,7 @@ function ExamInner() {
             setIndex(i)
             setPhase('exam')
           }}
-          onSubmit={() => void handleSubmit(false)}
+          onSubmit={() => void handleSubmit('review')}
         />
       </div>
     )
@@ -309,9 +311,15 @@ function ExamInner() {
           </p>
         ) : null}
 
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 exam-no-copy">
-          <ExamWatermark studentName={session.studentName || ''} />
-          <h2 className="relative z-[2] text-base font-medium leading-relaxed sm:text-lg">{current?.prompt}</h2>
+        <div
+          className="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 exam-no-copy"
+          onCopy={(e) => e.preventDefault()}
+          onCut={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <ExamWatermark studentName={session.studentName || ''} attemptId={session.attemptId} />
+          <ExamAntiAiBanner studentName={session.studentName || ''} attemptId={session.attemptId} />
+          {current?.prompt ? <ProtectedExamPrompt prompt={current.prompt} /> : null}
           <div
             className={`relative z-[2] mt-5 gap-3 sm:mt-6 ${current?.options.length === 2 ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'space-y-3'}`}
           >

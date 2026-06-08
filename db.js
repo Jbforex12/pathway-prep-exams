@@ -159,6 +159,7 @@ async function migrateSchema(db) {
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN duration_minutes INTEGER");
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN result_email_sent_at TEXT");
   await addColumn("ALTER TABLE exams ADD COLUMN code TEXT");
+  await addColumn("ALTER TABLE exam_attempts ADD COLUMN submit_reason TEXT");
 }
 
 async function initDb(dataDir) {

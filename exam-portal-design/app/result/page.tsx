@@ -48,7 +48,9 @@ function ResultInner() {
         ) : (
           <XCircle className="mx-auto size-12 text-destructive" />
         )}
-        <h1 className="mt-4 font-heading text-2xl font-semibold">{result.passed ? 'Congratulations!' : 'Exam complete'}</h1>
+        <h1 className="mt-4 font-heading text-2xl font-semibold">
+          {result.integrityViolation ? 'Exam auto-submitted' : result.passed ? 'Congratulations!' : 'Exam complete'}
+        </h1>
         <p className="mt-2 text-muted-foreground">{result.examTitle}</p>
         <p className="mt-6 text-4xl font-bold text-primary sm:text-5xl">{result.scorePercent}%</p>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -57,6 +59,12 @@ function ResultInner() {
         {result.attemptNumber ? (
           <p className="mt-1 text-xs text-muted-foreground">
             Attempt {result.attemptNumber} of {result.attemptsMax ?? 2}
+          </p>
+        ) : null}
+        {result.integrityViolation ? (
+          <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            This attempt was auto-submitted because you left the exam window. An integrity notice was emailed to you.
+            No certificate is issued for this attempt — contact your Agent.
           </p>
         ) : null}
         {result.passed && result.certificateSent ? (

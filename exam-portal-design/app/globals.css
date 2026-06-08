@@ -78,6 +78,10 @@
   -webkit-user-select: none;
   user-select: none;
 }
+
+.exam-word {
+  pointer-events: none;
+}
   .mobile-scroll-x {
     margin-left: max(-1rem, calc(-1 * env(safe-area-inset-left)));
     margin-right: max(-1rem, calc(-1 * env(safe-area-inset-right)));
