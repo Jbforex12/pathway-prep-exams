@@ -90,6 +90,15 @@ export default function DashboardPage() {
                 >
                   <div className="min-w-0">
                     <h3 className="font-bold break-words">{exam.title}</h3>
+                    {exam.published_at ? (
+                      <p className="mt-1 text-xs font-medium text-primary">
+                        Updated{' '}
+                        {new Date(exam.published_at).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3.5 shrink-0" />

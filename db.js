@@ -160,6 +160,12 @@ async function migrateSchema(db) {
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN result_email_sent_at TEXT");
   await addColumn("ALTER TABLE exams ADD COLUMN code TEXT");
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN submit_reason TEXT");
+  await addColumn("ALTER TABLE exams ADD COLUMN published_at TEXT");
+  await addColumn("ALTER TABLE exam_attempts ADD COLUMN exam_published_at TEXT");
+  await db.run(
+    `UPDATE exams SET published_at = updated_at
+     WHERE status = 'published' AND (published_at IS NULL OR published_at = '')`
+  );
 }
 
 async function initDb(dataDir) {

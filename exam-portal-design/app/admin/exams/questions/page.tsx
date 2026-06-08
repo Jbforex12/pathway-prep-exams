@@ -298,8 +298,9 @@ function QuestionsInner() {
           <p className="mt-3 text-xs text-muted-foreground">Add or import at least one question to enable publishing.</p>
         ) : exam.status === 'published' ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            After editing questions, timer, or settings, click <strong>Republish changes</strong> so new student attempts
-            use the updated pool and configuration. Attempts already in progress are not affected.
+            After editing questions, timer, or settings, click <strong>Republish changes</strong>. Students will see the
+            updated exam on their dashboard and any in-progress attempts are cleared so they start fresh with the new
+            version.
           </p>
         ) : null}
       </div>

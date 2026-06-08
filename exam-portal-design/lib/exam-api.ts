@@ -180,6 +180,8 @@ export type ExamRow = {
   duration_minutes: number
   question_count: number
   cutoff_percent: number
+  published_at?: string | null
+  updated_at?: string | null
   attemptsUsed?: number
   attemptsMax?: number
   canTake?: boolean
@@ -241,6 +243,8 @@ export type ExamPreview = {
   canTake: boolean
   hasInProgress: boolean
   inProgressAttemptId?: string | null
+  publishedAt?: string | null
+  revisedSinceLastAttempt?: boolean
 }
 
 export type ExamSession = {

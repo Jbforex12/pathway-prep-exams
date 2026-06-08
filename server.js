@@ -32,6 +32,7 @@ const { generateExamCertificatePdf } = require("./lib/exam-certificate");
 const { ensureTemplateFile } = require("./lib/certificate-pdf");
 const {
   getExamPreview,
+  discardInProgressAttemptsForExam,
   startAttempt,
   saveAnswer,
   submitAttempt,
@@ -436,15 +437,16 @@ app.post("/api/exam/admin/exams/:id/publish", authAdmin, async (req, res) => {
   }
   const now = new Date().toISOString();
   const perAttempt = Math.min(exam.question_count, pool);
+  await discardInProgressAttemptsForExam(req.params.id);
   await getDb().run(
-    "UPDATE exams SET status = 'published', question_count = ?, updated_at = ? WHERE id = ?",
-    [perAttempt, now, req.params.id]
+    "UPDATE exams SET status = 'published', question_count = ?, updated_at = ?, published_at = ? WHERE id = ?",
+    [perAttempt, now, now, req.params.id]
   );
   const wasPublished = exam.status === "published";
   res.json({
     exam: await getExamById(req.params.id),
     message: wasPublished
-      ? `Republished — ${perAttempt} question(s) per attempt for new tries.`
+      ? `Republished — ${perAttempt} question(s) per attempt. Students now see the updated exam; in-progress attempts were cleared.`
       : `Published with ${perAttempt} question(s) per attempt.`
   });
 });

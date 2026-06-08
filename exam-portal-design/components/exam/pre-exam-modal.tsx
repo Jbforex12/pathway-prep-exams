@@ -61,6 +61,16 @@ export function PreExamModal({ preview, starting, onConfirm, onCancel }: Props) 
             </div>
           </div>
 
+          {preview.revisedSinceLastAttempt ? (
+            <p className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+              This exam was <strong>updated and republished</strong>
+              {preview.publishedAt
+                ? ` on ${new Date(preview.publishedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
+                : ''}
+              . You will receive the latest questions and settings on this attempt.
+            </p>
+          ) : null}
+
           {preview.poolSize > preview.questionCount ? (
             <p className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
               Questions are drawn randomly from a bank of {preview.poolSize}. Your set and answer order are unique to
