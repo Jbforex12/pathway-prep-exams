@@ -65,6 +65,12 @@ function ResultInner() {
             Certificate sent to your email
           </p>
         ) : null}
+        {result.passed && !result.certificateSent ? (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Your certificate is being prepared. Refresh this page in a moment, or contact your training partner if it
+            does not arrive.
+          </p>
+        ) : null}
         {!result.passed && result.resultEmailSent ? (
           <p className="mt-4 text-sm text-muted-foreground">
             A summary of your result has been sent to your email.

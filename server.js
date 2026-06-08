@@ -27,7 +27,8 @@ const {
   clearStudentSessionCookie,
   readStudentSessionToken
 } = require("./lib/exam-session");
-const { sendOtpEmail } = require("./lib/email");
+const { sendOtpEmail, getEmailConfig } = require("./lib/email");
+const { ensureTemplateFile } = require("./lib/certificate-pdf");
 const {
   startAttempt,
   saveAnswer,
@@ -571,6 +572,7 @@ app.post("/api/exam/admin/attempts/:id/resend-certificate", authAdmin, async (re
   const result = await deliverPassCertificate({
     attemptId: row.id,
     exam,
+    candidateId: row.candidate_id,
     candidateRow: {
       id: row.candidate_id,
       name: row.candidate_name,
@@ -627,6 +629,18 @@ app.use(express.static(path.join(__dirname, "public")));
 
 async function start() {
   await initDb(path.join(__dirname, "data"));
+  try {
+    const tpl = ensureTemplateFile();
+    console.log(`Certificate template: ${tpl}`);
+  } catch (e) {
+    console.error("Certificate template error:", e.message);
+  }
+  const mail = getEmailConfig();
+  if (mail.configured) {
+    console.log(`Email: Resend configured (${mail.from?.email})`);
+  } else {
+    console.warn("Email: Resend NOT configured — set RESEND_API_KEY and RESEND_FROM on this Render service.");
+  }
   app.listen(PORT, () => {
     console.log("Pathway Prep Exams");
     console.log(`  Student:  ${PUBLIC_URL}/`);

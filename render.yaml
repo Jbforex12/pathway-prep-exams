@@ -2,7 +2,7 @@ services:
   - type: web
     name: pathway-prep-exams
     runtime: node
-    buildCommand: npm install && npm run exam:build
+    buildCommand: npm install && npm run cert:build-template && npm run exam:build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -19,6 +19,10 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM
+        sync: false
+      - key: RESEND_DOMAIN
+        sync: false
+      - key: RESEND_REPLY_TO
         sync: false
       - key: EXAM_PUBLIC_URL
         sync: false
