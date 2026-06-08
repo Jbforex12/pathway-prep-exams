@@ -52,7 +52,7 @@ const {
   deliverPassCertificate,
   adminResendResultEmail,
   recordIntegrityEvent,
-  MAX_ATTEMPTS_PER_EXAM
+  clampAttemptsMax
 } = require("./lib/exam-engine");
 const { courseMatches } = require("./lib/course-match");
 const { parseExcelBuffer } = require("./lib/import-excel");
@@ -290,7 +290,7 @@ app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res)
       ...status
     });
   }
-  res.json({ exams, attemptsMax: MAX_ATTEMPTS_PER_EXAM });
+  res.json({ exams });
 });
 
 app.get("/api/exam/student/attempts", studentLimiter, authStudent, async (req, res) => {
@@ -425,8 +425,8 @@ app.post("/api/exam/admin/exams", authAdmin, async (req, res) => {
   const code = body.code ? String(body.code).trim().toUpperCase() : null;
   await getDb().run(
     `INSERT INTO exams
-     (id, title, code, course_name, cutoff_percent, duration_minutes, question_count, shuffle_mode, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+     (id, title, code, course_name, cutoff_percent, duration_minutes, attempts_max, question_count, shuffle_mode, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
     [
       id,
       title,
@@ -434,6 +434,7 @@ app.post("/api/exam/admin/exams", authAdmin, async (req, res) => {
       course_name,
       Math.min(100, Math.max(0, parseInt(body.cutoff_percent, 10) || 70)),
       Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30)),
+      clampAttemptsMax(body.attempts_max),
       Math.max(1, parseInt(body.question_count, 10) || 10),
       body.shuffle_mode === "options_only" ? "options_only" : "questions",
       now,
@@ -477,6 +478,7 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
       course_name = COALESCE(?, course_name),
       cutoff_percent = COALESCE(?, cutoff_percent),
       duration_minutes = COALESCE(?, duration_minutes),
+      attempts_max = COALESCE(?, attempts_max),
       question_count = COALESCE(?, question_count),
       shuffle_mode = COALESCE(?, shuffle_mode),
       updated_at = ?
@@ -491,6 +493,7 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
       body.duration_minutes != null
         ? Math.min(180, Math.max(5, parseInt(body.duration_minutes, 10) || 30))
         : null,
+      body.attempts_max != null ? clampAttemptsMax(body.attempts_max) : null,
       body.question_count != null ? Math.max(1, parseInt(body.question_count, 10) || 1) : null,
       shuffleMode,
       now,
@@ -760,7 +763,7 @@ app.get("/api/exam/admin/attempts/export", authAdmin, async (req, res) => {
 
 app.get("/api/exam/admin/reschedules", authAdmin, async (req, res) => {
   const exhausted = await listExhaustedCandidateExams();
-  res.json({ exhausted, attemptsMax: MAX_ATTEMPTS_PER_EXAM });
+  res.json({ exhausted });
 });
 
 app.post("/api/exam/admin/reschedules", authAdmin, async (req, res) => {

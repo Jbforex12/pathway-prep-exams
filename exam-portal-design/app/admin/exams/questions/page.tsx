@@ -174,7 +174,7 @@ function QuestionsInner() {
   return (
     <AdminShell
       title={exam.title}
-      subtitle={`${exam.course_name} · ${exam.status} · ${pool} in pool · ${perAttempt} per attempt · ${exam.duration_minutes} min timer`}
+      subtitle={`${exam.course_name} · ${exam.status} · ${pool} in pool · ${perAttempt} per attempt · ${exam.duration_minutes} min timer · ${exam.attempts_max ?? 2} attempts max`}
     >
       {statusMsg ? (
         <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary">
@@ -232,6 +232,19 @@ function QuestionsInner() {
             type="number"
             defaultValue={exam.question_count}
             onBlur={(e) => adminUpdateExam(examId, { question_count: parseInt(e.target.value, 10) }).then(load)}
+          />
+        </Field>
+        <Field label="Max attempts per student">
+          <TextInput
+            type="number"
+            min={1}
+            max={10}
+            defaultValue={exam.attempts_max ?? 2}
+            onBlur={(e) =>
+              adminUpdateExam(examId, {
+                attempts_max: Math.min(10, Math.max(1, parseInt(e.target.value, 10) || 2)),
+              }).then(load)
+            }
           />
         </Field>
         <Field label="Shuffle mode">

@@ -11,6 +11,7 @@ const EXAM_SCHEMA_SQL = `
       course_name TEXT NOT NULL,
       cutoff_percent INTEGER NOT NULL DEFAULT 70,
       duration_minutes INTEGER NOT NULL DEFAULT 30,
+      attempts_max INTEGER NOT NULL DEFAULT 2,
       question_count INTEGER NOT NULL DEFAULT 20,
       shuffle_mode TEXT NOT NULL DEFAULT 'questions',
       status TEXT NOT NULL DEFAULT 'draft',
@@ -161,6 +162,10 @@ async function migrateSchema(db) {
   await addColumn("ALTER TABLE exams ADD COLUMN code TEXT");
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN submit_reason TEXT");
   await addColumn("ALTER TABLE exams ADD COLUMN published_at TEXT");
+  await addColumn("ALTER TABLE exams ADD COLUMN attempts_max INTEGER NOT NULL DEFAULT 2");
+  await db.run(
+    `UPDATE exams SET attempts_max = 2 WHERE attempts_max IS NULL OR attempts_max < 1`
+  );
   await addColumn("ALTER TABLE exam_attempts ADD COLUMN exam_published_at TEXT");
   await addColumn(
     "ALTER TABLE exam_attempts ADD COLUMN integrity_events INTEGER NOT NULL DEFAULT 0"

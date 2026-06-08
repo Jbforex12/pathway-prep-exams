@@ -162,7 +162,7 @@ export async function adminAttempts() {
 }
 
 export async function adminExhaustedExams() {
-  return apiFetch<{ exhausted: ExhaustedExamRow[]; attemptsMax: number }>('/api/exam/admin/reschedules')
+  return apiFetch<{ exhausted: ExhaustedExamRow[] }>('/api/exam/admin/reschedules')
 }
 
 export async function adminRescheduleExam(body: { exam_id: string; candidate_id: string; note?: string }) {
@@ -192,6 +192,7 @@ export type ExamRow = {
   code?: string | null
   course_name: string
   duration_minutes: number
+  attempts_max?: number
   question_count: number
   cutoff_percent: number
   published_at?: string | null
