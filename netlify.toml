@@ -1,7 +1,7 @@
 # Free-tier fix: serve the static exam UI from Netlify (always instant),
 # proxy API + health checks to Render so the backend can sleep less often.
 [build]
-  command = "npm install && npm run exam:install && npm run exam:build"
+  command = "npm install && npm run exam:build"
   publish = "exam-portal-design/out"
 
 [build.environment]

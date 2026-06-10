@@ -11,7 +11,7 @@ git push -u origin main
 ## 2. Render
 
 1. **New Web Service** → connect `pathway-prep-exams` repo (or use `render.yaml` Blueprint)
-2. **Build command:** `npm install && npm run exam:build` (required — without this you get `Cannot GET /`)
+2. **Build command:** `npm install && npm run render:build` (API only — Netlify serves the student UI)
 3. **Instance type:** Free
 3. **Environment variables** (copy from `.env.example`):
 
