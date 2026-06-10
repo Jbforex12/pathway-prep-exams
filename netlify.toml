@@ -4,6 +4,9 @@
   command = "npm install && npm run exam:install && npm run exam:build"
   publish = "exam-portal-design/out"
 
+[build.environment]
+  NODE_VERSION = "22"
+
 [[redirects]]
   from = "/api/exam/*"
   to = "https://pathway-prep-exams.onrender.com/api/exam/:splat"
