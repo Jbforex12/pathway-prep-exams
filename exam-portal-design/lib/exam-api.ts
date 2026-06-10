@@ -125,6 +125,20 @@ export async function adminPublishExam(id: string) {
   )
 }
 
+export async function adminUnpublishExam(id: string) {
+  return apiFetch<{ exam: ExamAdminRow; message?: string }>(
+    '/api/exam/admin/exams/' + encodeURIComponent(id) + '/unpublish',
+    { method: 'POST' },
+  )
+}
+
+export async function adminDeleteExam(id: string) {
+  return apiFetch<{ ok: boolean; message?: string }>(
+    '/api/exam/admin/exams/' + encodeURIComponent(id),
+    { method: 'DELETE' },
+  )
+}
+
 export async function adminAddQuestion(examId: string, body: Partial<QuestionRow>) {
   return apiFetch('/api/exam/admin/exams/' + encodeURIComponent(examId) + '/questions', {
     method: 'POST',

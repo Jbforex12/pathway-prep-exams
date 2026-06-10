@@ -15,3 +15,25 @@
   to = "https://pathway-prep-exams.onrender.com/health"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/certificates/*"
+  to = "https://pathway-prep-exams.onrender.com/api/certificates/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/assets/*"
+  to = "https://pathway-prep-exams.onrender.com/assets/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/logo.png"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

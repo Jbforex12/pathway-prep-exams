@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Clock, Plus, Trash2, Upload } from 'lucide-react'
+import { Clock, EyeOff, Plus, Trash2, Upload } from 'lucide-react'
 import { AdminShell } from '@/components/admin-shell'
 import { Field, Select, TextInput } from '@/components/form-fields'
 import { Spinner } from '@/components/ui-bits'
@@ -15,10 +15,12 @@ import {
 import {
   ApiError,
   adminAddQuestion,
+  adminDeleteExam,
   adminDeleteQuestion,
   adminGetExam,
   adminImportExcel,
   adminPublishExam,
+  adminUnpublishExam,
   adminUpdateExam,
   type ExamAdminRow,
   type QuestionRow,
@@ -59,6 +61,8 @@ function QuestionsInner() {
   const [importing, setImporting] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [unpublishing, setUnpublishing] = useState(false)
+  const [deletingExam, setDeletingExam] = useState(false)
 
   async function load() {
     const data = await adminGetExam(examId)
@@ -156,6 +160,52 @@ function QuestionsInner() {
       showError(err instanceof ApiError ? err.message : 'Could not publish exam.')
     } finally {
       setPublishing(false)
+    }
+  }
+
+  async function takeDownExam() {
+    if (!exam) return
+    if (
+      !window.confirm(
+        `Take down "${exam.title}"?\n\nStudents will no longer see this exam on their dashboard. In-progress attempts will be cleared. You can edit and publish again later.`,
+      )
+    ) {
+      return
+    }
+    setUnpublishing(true)
+    setStatusErr('')
+    try {
+      const res = await adminUnpublishExam(examId)
+      await load()
+      showSuccess(res.message || 'Exam taken down.')
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Could not take down exam.')
+    } finally {
+      setUnpublishing(false)
+    }
+  }
+
+  async function removeExam() {
+    if (!exam) return
+    const warn =
+      exam.status === 'published'
+        ? '\n\nThis exam is currently published. Deleting it removes it for all students immediately.'
+        : ''
+    if (
+      !window.confirm(
+        `Permanently delete "${exam.title}"?${warn}\n\nAll questions, attempts, and results for this exam will be removed. This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+    setDeletingExam(true)
+    setStatusErr('')
+    try {
+      await adminDeleteExam(examId)
+      router.replace('/admin/exams/')
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Could not delete exam.')
+      setDeletingExam(false)
     }
   }
 
@@ -340,6 +390,36 @@ function QuestionsInner() {
             version.
           </p>
         ) : null}
+      </div>
+
+      <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+        <h3 className="font-semibold text-destructive">Exam actions</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Take down hides the exam from students while keeping your questions and settings. Delete removes the exam
+          permanently, including all student attempts and results.
+        </p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {exam.status === 'published' ? (
+            <button
+              type="button"
+              disabled={unpublishing || deletingExam}
+              onClick={() => void takeDownExam()}
+              className="touch-target inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 text-sm font-semibold text-amber-800 disabled:opacity-60 dark:text-amber-300 sm:h-10"
+            >
+              {unpublishing ? <Spinner className="size-4" /> : <EyeOff className="size-4" />}
+              Take down exam
+            </button>
+          ) : null}
+          <button
+            type="button"
+            disabled={unpublishing || deletingExam}
+            onClick={() => void removeExam()}
+            className="touch-target inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 text-sm font-semibold text-destructive disabled:opacity-60 sm:h-10"
+          >
+            {deletingExam ? <Spinner className="size-4" /> : <Trash2 className="size-4" />}
+            Delete exam permanently
+          </button>
+        </div>
       </div>
 
       <form onSubmit={addQuestion} className="mb-8 rounded-xl border border-border bg-card p-5 space-y-4">

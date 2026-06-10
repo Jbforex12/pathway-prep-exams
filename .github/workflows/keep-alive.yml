@@ -2,8 +2,8 @@ name: Keep exams warm
 
 on:
   schedule:
-    # Every 5 minutes — Render free tier sleeps after ~15 min idle.
-    - cron: "*/5 * * * *"
+    # Every 4 minutes — Render free tier sleeps after ~15 min idle.
+    - cron: "*/4 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
         run: |
           for URL in \
             "https://pathway-prep-exams.onrender.com/health" \
-            "https://exams.pathwayprep.online/health"
+            "https://partners.pathwayprep.online/health"
           do
             echo "Pinging $URL"
             curl -fsS \
@@ -29,9 +29,13 @@ jobs:
 
       - name: Keep traffic for 12 minutes (overlap next cron)
         run: |
-          URL="https://pathway-prep-exams.onrender.com/health"
-          for i in 1 2 3 4; do
-            sleep 180
-            echo "Follow-up ping $i"
-            curl -fsS --max-time 90 "$URL" || true
+          for URL in \
+            "https://pathway-prep-exams.onrender.com/health" \
+            "https://partners.pathwayprep.online/health"
+          do
+            for i in 1 2 3 4; do
+              sleep 180
+              echo "Follow-up ping $i — $URL"
+              curl -fsS --max-time 90 "$URL" || true
+            done
           done

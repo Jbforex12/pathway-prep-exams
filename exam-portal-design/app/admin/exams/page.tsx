@@ -3,12 +3,19 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { EyeOff, Plus, Trash2 } from 'lucide-react'
 import { AdminShell } from '@/components/admin-shell'
 import { Field, Select, TextInput } from '@/components/form-fields'
 import { Spinner } from '@/components/ui-bits'
 import { COURSES } from '@/lib/exam-data'
-import { ApiError, adminCreateExam, adminExams, type ExamAdminRow } from '@/lib/exam-api'
+import {
+  ApiError,
+  adminCreateExam,
+  adminDeleteExam,
+  adminExams,
+  adminUnpublishExam,
+  type ExamAdminRow,
+} from '@/lib/exam-api'
 
 export default function AdminExamsPage() {
   const router = useRouter()
@@ -18,6 +25,9 @@ export default function AdminExamsPage() {
   const [title, setTitle] = useState('')
   const [course, setCourse] = useState(COURSES[0])
   const [saving, setSaving] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
   function refresh() {
     return adminExams().then((r) => setExams(r.exams))
@@ -30,6 +40,54 @@ export default function AdminExamsPage() {
       })
       .finally(() => setLoading(false))
   }, [router])
+
+  async function takeDownExam(exam: ExamAdminRow) {
+    if (
+      !window.confirm(
+        `Take down "${exam.title}"?\n\nStudents will no longer see this exam. You can edit and publish again later.`,
+      )
+    ) {
+      return
+    }
+    setBusyId(exam.id)
+    setError('')
+    try {
+      const res = await adminUnpublishExam(exam.id)
+      setMessage(res.message || 'Exam taken down.')
+      await refresh()
+    } catch (err) {
+      setMessage('')
+      setError(err instanceof ApiError ? err.message : 'Could not take down exam.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function removeExam(exam: ExamAdminRow) {
+    const warn =
+      exam.status === 'published'
+        ? '\n\nThis exam is currently published. Deleting it removes it for all students immediately.'
+        : ''
+    if (
+      !window.confirm(
+        `Permanently delete "${exam.title}"?${warn}\n\nAll questions, attempts, and results will be removed. This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+    setBusyId(exam.id)
+    setError('')
+    try {
+      await adminDeleteExam(exam.id)
+      setMessage('Exam deleted.')
+      await refresh()
+    } catch (err) {
+      setMessage('')
+      setError(err instanceof ApiError ? err.message : 'Could not delete exam.')
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   async function createExam(e: React.FormEvent) {
     e.preventDefault()
@@ -81,6 +139,17 @@ export default function AdminExamsPage() {
         </form>
       ) : null}
 
+      {message ? (
+        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-primary">
+          {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <Spinner />
@@ -96,12 +165,36 @@ export default function AdminExamsPage() {
                   <span className="rounded-full bg-muted px-2 py-1 capitalize">{exam.status}</span>
                   <span className="rounded-full bg-muted px-2 py-1">{exam.question_pool ?? 0} questions</span>
                 </div>
-                <Link
-                  href={`/admin/exams/questions/?id=${encodeURIComponent(exam.id)}`}
-                  className="touch-target mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg border border-border text-sm font-medium text-primary"
-                >
-                  Manage questions
-                </Link>
+                <div className="mt-4 flex flex-col gap-2">
+                  <Link
+                    href={`/admin/exams/questions/?id=${encodeURIComponent(exam.id)}`}
+                    className="touch-target inline-flex h-11 w-full items-center justify-center rounded-lg border border-border text-sm font-medium text-primary"
+                  >
+                    Manage questions
+                  </Link>
+                  <div className="flex gap-2">
+                    {exam.status === 'published' ? (
+                      <button
+                        type="button"
+                        disabled={busyId === exam.id}
+                        onClick={() => void takeDownExam(exam)}
+                        className="touch-target inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 text-xs font-semibold text-amber-800 disabled:opacity-60 dark:text-amber-300"
+                      >
+                        {busyId === exam.id ? <Spinner className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                        Take down
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={busyId === exam.id}
+                      onClick={() => void removeExam(exam)}
+                      className="touch-target inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-3 text-xs font-semibold text-destructive disabled:opacity-60"
+                    >
+                      {busyId === exam.id ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />}
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -115,7 +208,7 @@ export default function AdminExamsPage() {
                     <th className="px-4 py-3">Course</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Questions</th>
-                    <th className="px-4 py-3" />
+                    <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,13 +218,37 @@ export default function AdminExamsPage() {
                       <td className="px-4 py-3 text-muted-foreground">{exam.course_name}</td>
                       <td className="px-4 py-3 capitalize">{exam.status}</td>
                       <td className="px-4 py-3">{exam.question_pool ?? 0}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/admin/exams/questions/?id=${encodeURIComponent(exam.id)}`}
-                          className="font-medium text-primary"
-                        >
-                          Questions →
-                        </Link>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/exams/questions/?id=${encodeURIComponent(exam.id)}`}
+                            className="font-medium text-primary"
+                          >
+                            Questions →
+                          </Link>
+                          {exam.status === 'published' ? (
+                            <button
+                              type="button"
+                              disabled={busyId === exam.id}
+                              onClick={() => void takeDownExam(exam)}
+                              title="Take down exam"
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-500/50 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-800 disabled:opacity-60 dark:text-amber-300"
+                            >
+                              {busyId === exam.id ? <Spinner className="size-3" /> : <EyeOff className="size-3" />}
+                              Take down
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            disabled={busyId === exam.id}
+                            onClick={() => void removeExam(exam)}
+                            title="Delete exam"
+                            className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive disabled:opacity-60"
+                          >
+                            {busyId === exam.id ? <Spinner className="size-3" /> : <Trash2 className="size-3" />}
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -93,6 +93,7 @@ const COURSES = [
 ];
 
 const app = express();
+let dbReady = false;
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
 app.use((req, res, next) => {
@@ -137,7 +138,12 @@ async function authStudent(req, res, next) {
 }
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", service: "pathway-prep-exams" });
+  res.json({ status: "ok", service: "pathway-prep-exams", db: dbReady ? "ready" : "starting" });
+});
+
+app.use((req, res, next) => {
+  if (dbReady || !req.path.startsWith("/api/")) return next();
+  res.status(503).json({ error: "Service is starting. Please try again in a few seconds." });
 });
 
 app.get("/api/certificates/:id/verify", certVerifyLimiter, async (req, res) => {
@@ -503,10 +509,34 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
   res.json({ exam: await getExamById(req.params.id) });
 });
 
+app.post("/api/exam/admin/exams/:id/unpublish", authAdmin, async (req, res) => {
+  const exam = await getExamById(req.params.id);
+  if (!exam) return res.status(404).json({ error: "Exam not found." });
+  if (exam.status !== "published") {
+    return res.status(400).json({ error: "Exam is not published." });
+  }
+  const now = new Date().toISOString();
+  await discardInProgressAttemptsForExam(req.params.id);
+  await getDb().run(
+    "UPDATE exams SET status = 'draft', updated_at = ? WHERE id = ?",
+    [now, req.params.id]
+  );
+  res.json({
+    exam: await getExamById(req.params.id),
+    message:
+      "Exam taken down. Students no longer see it on their dashboard. You can edit and publish again later."
+  });
+});
+
 app.delete("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
-  await getDb().run("DELETE FROM questions WHERE exam_id = ?", [req.params.id]);
-  await getDb().run("DELETE FROM exams WHERE id = ?", [req.params.id]);
-  res.json({ ok: true });
+  const exam = await getExamById(req.params.id);
+  if (!exam) return res.status(404).json({ error: "Exam not found." });
+  const examId = req.params.id;
+  await getDb().run("DELETE FROM exam_attempt_resets WHERE exam_id = ?", [examId]);
+  await getDb().run("DELETE FROM exam_attempts WHERE exam_id = ?", [examId]);
+  await getDb().run("DELETE FROM questions WHERE exam_id = ?", [examId]);
+  await getDb().run("DELETE FROM exams WHERE id = ?", [examId]);
+  res.json({ ok: true, message: "Exam and all related questions and attempts were deleted." });
 });
 
 app.post("/api/exam/admin/exams/:id/publish", authAdmin, async (req, res) => {
@@ -846,6 +876,16 @@ if (!uiBuilt) {
 }
 
 if (uiBuilt) {
+  app.use(
+    "/_next/static",
+    express.static(path.join(uiOut, "_next/static"), {
+      maxAge: "1y",
+      immutable: true,
+      setHeaders(res) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    })
+  );
   app.use(express.static(uiOut, { index: false, redirect: false }));
   const withTrailingSlash = (p) => (p.endsWith("/") ? p : `${p}/`);
   const sendPage = (segments, withSlash) => (req, res) => {
@@ -871,7 +911,22 @@ if (uiBuilt) {
 app.use(express.static(path.join(__dirname, "public")));
 
 async function start() {
-  await initDb(path.join(__dirname, "data"));
+  app.listen(PORT, () => {
+    console.log("Pathway Prep Exams");
+    console.log(`  Student:  ${PUBLIC_URL}/`);
+    console.log(`  Admin:    ${PUBLIC_URL}/admin/`);
+    console.log(`  Home:     ${HOME_URL}`);
+  });
+
+  try {
+    await initDb(path.join(__dirname, "data"));
+    dbReady = true;
+    console.log("Database ready");
+  } catch (e) {
+    console.error("Database init failed:", e);
+    process.exit(1);
+  }
+
   try {
     const tpl = ensureTemplateFile();
     console.log(`Certificate template: ${tpl}`);
@@ -884,12 +939,6 @@ async function start() {
   } else {
     console.warn("Email: Resend NOT configured — set RESEND_API_KEY and RESEND_FROM on this Render service.");
   }
-  app.listen(PORT, () => {
-    console.log("Pathway Prep Exams");
-    console.log(`  Student:  ${PUBLIC_URL}/`);
-    console.log(`  Admin:    ${PUBLIC_URL}/admin/`);
-    console.log(`  Home:     ${HOME_URL}`);
-  });
 }
 
 start().catch((e) => {
