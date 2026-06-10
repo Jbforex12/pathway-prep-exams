@@ -7,7 +7,11 @@ const root = path.join(__dirname, "..");
 function ensure(command, missingLabel, checkPath) {
   if (fs.existsSync(checkPath)) return;
   console.log(missingLabel);
-  execSync(command, { stdio: "inherit", cwd: root });
+  execSync(command, {
+    stdio: "inherit",
+    cwd: root,
+    env: { ...process.env, NODE_ENV: "development" }
+  });
 }
 
 ensure(

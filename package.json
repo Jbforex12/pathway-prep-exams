@@ -7,9 +7,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/ensure-built.js && node server.js",
     "dev": "node server.js",
-    "exam:install": "npm install --prefix exam-portal-design",
+    "exam:install": "npm install --prefix exam-portal-design --include=dev",
     "exam:build": "npm run exam:install && npm run build --prefix exam-portal-design",
     "render:build": "npm run cert:build-template && npm run template:build",
     "template:build": "node scripts/build-import-template.js",
