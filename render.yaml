@@ -2,7 +2,7 @@ services:
   - type: web
     name: pathway-prep-exams
     runtime: node
-    buildCommand: npm install && npm run cert:build-template && npm run exam:build
+    buildCommand: npm install && npm run exam:install && npm run cert:build-template && npm run exam:build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
