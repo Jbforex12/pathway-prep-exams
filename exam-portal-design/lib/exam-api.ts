@@ -107,6 +107,23 @@ export async function adminStats() {
   return apiFetch<{ exams: number; published: number; attempts: number; passed: number }>('/api/exam/admin/stats')
 }
 
+export const ADMIN_WIPE_CONFIRM_PHRASE = 'WIPE ALL EXAM DATA'
+
+export async function adminWipePlatform(confirm: string) {
+  return apiFetch<{
+    ok: boolean
+    message: string
+    removed: {
+      exams: number
+      questions: number
+      attempts: number
+      reschedules: number
+      candidates: number
+      otp_codes: number
+    }
+  }>('/api/exam/admin/platform/wipe', { method: 'POST', body: JSON.stringify({ confirm }) })
+}
+
 export async function adminExams() {
   return apiFetch<{ exams: ExamAdminRow[] }>('/api/exam/admin/exams')
 }

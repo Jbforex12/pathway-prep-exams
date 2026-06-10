@@ -64,6 +64,7 @@ const { parseExcelBuffer } = require("./lib/import-excel");
 const { parsePdfBuffer } = require("./lib/import-pdf");
 const { importQuestionsForExam } = require("./lib/import-questions");
 const { normalizeQuestionInput } = require("./lib/question-types");
+const { WIPE_CONFIRM_PHRASE, wipeExamPlatform } = require("./lib/wipe-platform");
 
 function env(name) {
   let v = (process.env[name] || "").trim();
@@ -401,6 +402,21 @@ app.delete("/api/exam/admin/session", (req, res) => {
 });
 
 app.use(["/api/exam/admin"], adminLimiter);
+
+app.post("/api/exam/admin/platform/wipe", authAdmin, async (req, res) => {
+  const confirm = String(req.body?.confirm || "").trim();
+  if (confirm !== WIPE_CONFIRM_PHRASE) {
+    return res.status(400).json({
+      error: `Type exactly "${WIPE_CONFIRM_PHRASE}" to confirm.`
+    });
+  }
+  try {
+    const result = await wipeExamPlatform();
+    res.json(result);
+  } catch (e) {
+    respondError(res, e, "Could not wipe platform data.");
+  }
+});
 
 app.get("/api/exam/admin/stats", authAdmin, async (req, res) => {
   const exams = await getDb().get("SELECT COUNT(*) AS n FROM exams");

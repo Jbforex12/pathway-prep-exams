@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AdminShell } from '@/components/admin-shell'
 import { Spinner } from '@/components/ui-bits'
-import { ApiError, adminStats } from '@/lib/exam-api'
+import { ADMIN_WIPE_CONFIRM_PHRASE, ApiError, adminStats, adminWipePlatform } from '@/lib/exam-api'
 
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ exams: 0, published: 0, attempts: 0, passed: 0 })
+  const [wipePhrase, setWipePhrase] = useState('')
+  const [wiping, setWiping] = useState(false)
+  const [wipeMessage, setWipeMessage] = useState('')
+  const [wipeError, setWipeError] = useState('')
 
   useEffect(() => {
     adminStats()
@@ -56,6 +60,56 @@ export default function AdminDashboardPage() {
               View attempts
             </Link>
           </div>
+
+          <section className="mt-10 rounded-xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5">
+            <h2 className="text-sm font-semibold text-destructive">Go-live reset</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Removes every exam, question set, attempt, and registered candidate. Training partner accounts and
+              activation codes stay; used codes become available again.
+            </p>
+            <label className="mt-4 block text-sm font-medium" htmlFor="wipe-confirm">
+              Type <span className="font-mono text-xs">{ADMIN_WIPE_CONFIRM_PHRASE}</span> to confirm
+            </label>
+            <input
+              id="wipe-confirm"
+              value={wipePhrase}
+              onChange={(e) => setWipePhrase(e.target.value)}
+              className="mt-2 w-full max-w-md rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              autoComplete="off"
+            />
+            {wipeError ? <p className="mt-2 text-sm text-destructive">{wipeError}</p> : null}
+            {wipeMessage ? <p className="mt-2 text-sm text-primary">{wipeMessage}</p> : null}
+            <button
+              type="button"
+              disabled={wiping || wipePhrase !== ADMIN_WIPE_CONFIRM_PHRASE}
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    'Permanently delete all exams, questions, attempts, and candidates? This cannot be undone.',
+                  )
+                ) {
+                  return
+                }
+                setWiping(true)
+                setWipeError('')
+                setWipeMessage('')
+                try {
+                  const res = await adminWipePlatform(wipePhrase)
+                  setWipeMessage(res.message)
+                  setWipePhrase('')
+                  const fresh = await adminStats()
+                  setStats(fresh)
+                } catch (err) {
+                  setWipeError(err instanceof ApiError ? err.message : 'Reset failed.')
+                } finally {
+                  setWiping(false)
+                }
+              }}
+              className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-destructive px-4 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
+            >
+              {wiping ? 'Resetting…' : 'Reset platform for go-live'}
+            </button>
+          </section>
         </>
       )}
     </AdminShell>
