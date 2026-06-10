@@ -54,7 +54,12 @@ const {
   recordIntegrityEvent,
   clampAttemptsMax
 } = require("./lib/exam-engine");
-const { courseMatches } = require("./lib/course-match");
+const {
+  COURSES,
+  courseMatches,
+  resolveCatalogCourse,
+  validateCatalogCourseInput
+} = require("./lib/courses");
 const { parseExcelBuffer } = require("./lib/import-excel");
 const { parsePdfBuffer } = require("./lib/import-pdf");
 const { importQuestionsForExam } = require("./lib/import-questions");
@@ -85,12 +90,6 @@ function respondError(res, e, fallback = "Something went wrong. Please try again
   res.status(status).json({ error: message });
 }
 const HOME_URL = env("PORTAL_HOME_URL") || "https://pathwayprep.online";
-
-const COURSES = [
-  "HEALTHCARE ASSISTANT",
-  "PROFESSIONAL CLEANING & DOMESTIC SERVICE",
-  "WAREHOUSING & LOGISTICS"
-];
 
 const app = express();
 let dbReady = false;
@@ -275,7 +274,14 @@ app.get("/api/exam/student/me", studentLimiter, authStudent, (req, res) => {
 
 // ─── Student exams ────────────────────────────────────────────────────────────
 app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res) => {
-  const candidateCourse = String(req.candidate.course_name || "").trim();
+  const candidateCourse = resolveCatalogCourse(req.candidate.course_name);
+  if (!candidateCourse) {
+    return res.json({
+      exams: [],
+      courseReady: false,
+      message: "Your course is not set up for exams. Contact your training partner."
+    });
+  }
   const rows = await getDb().all(
     `SELECT e.* FROM exams e WHERE e.status = 'published' ORDER BY e.created_at DESC`
   );
@@ -296,19 +302,23 @@ app.get("/api/exam/student/exams", studentLimiter, authStudent, async (req, res)
       ...status
     });
   }
-  res.json({ exams });
+  res.json({ exams, courseReady: true, course_name: candidateCourse });
 });
 
 app.get("/api/exam/student/attempts", studentLimiter, authStudent, async (req, res) => {
-  const attempts = await getDb().all(
+  const candidateCourse = resolveCatalogCourse(req.candidate.course_name);
+  const rows = await getDb().all(
     `SELECT a.id, a.exam_id, a.started_at, a.submitted_at, a.score_percent, a.passed,
-            a.submit_reason, e.title AS exam_title, e.cutoff_percent
+            a.submit_reason, e.title AS exam_title, e.cutoff_percent, e.course_name
      FROM exam_attempts a
      JOIN exams e ON e.id = a.exam_id
      WHERE a.candidate_id = ?
      ORDER BY a.started_at DESC`,
     [req.candidate.id]
   );
+  const attempts = candidateCourse
+    ? rows.filter((a) => courseMatches(candidateCourse, a.course_name))
+    : [];
   res.json({ attempts });
 });
 
@@ -422,10 +432,14 @@ app.get("/api/exam/admin/exams", authAdmin, async (req, res) => {
 app.post("/api/exam/admin/exams", authAdmin, async (req, res) => {
   const body = req.body || {};
   const title = String(body.title || "").trim();
-  const course_name = String(body.course_name || "").trim();
-  if (!title || !course_name) {
-    return res.status(400).json({ error: "Title and course are required." });
+  const courseInput = validateCatalogCourseInput(body.course_name);
+  if (!title) {
+    return res.status(400).json({ error: "Title is required." });
   }
+  if (!courseInput.ok) {
+    return res.status(400).json({ error: courseInput.error });
+  }
+  const course_name = courseInput.course_name;
   const id = newId("exam");
   const now = new Date().toISOString();
   const code = body.code ? String(body.code).trim().toUpperCase() : null;
@@ -477,6 +491,14 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
   if (body.shuffle_mode != null) {
     shuffleMode = body.shuffle_mode === "options_only" ? "options_only" : "questions";
   }
+  let patchCourse = null;
+  if (body.course_name != null) {
+    const courseInput = validateCatalogCourseInput(body.course_name);
+    if (!courseInput.ok) {
+      return res.status(400).json({ error: courseInput.error });
+    }
+    patchCourse = courseInput.course_name;
+  }
   await getDb().run(
     `UPDATE exams SET
       title = COALESCE(?, title),
@@ -492,7 +514,7 @@ app.patch("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
     [
       body.title ? String(body.title).trim() : null,
       body.code != null ? String(body.code).trim().toUpperCase() || null : null,
-      body.course_name ? String(body.course_name).trim() : null,
+      patchCourse,
       body.cutoff_percent != null
         ? Math.min(100, Math.max(0, parseInt(body.cutoff_percent, 10) || 0))
         : null,
@@ -542,6 +564,11 @@ app.delete("/api/exam/admin/exams/:id", authAdmin, async (req, res) => {
 app.post("/api/exam/admin/exams/:id/publish", authAdmin, async (req, res) => {
   const exam = await getExamById(req.params.id);
   if (!exam) return res.status(404).json({ error: "Exam not found." });
+  if (!resolveCatalogCourse(exam.course_name)) {
+    return res.status(400).json({
+      error: "Set a valid course on this exam before publishing."
+    });
+  }
   const count = await getDb().get(
     "SELECT COUNT(*) AS n FROM questions WHERE exam_id = ?",
     [req.params.id]

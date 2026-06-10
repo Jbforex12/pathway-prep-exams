@@ -48,7 +48,12 @@ export async function studentMe() {
 }
 
 export async function studentExams() {
-  return apiFetch<{ exams: ExamRow[] }>('/api/exam/student/exams')
+  return apiFetch<{
+    exams: ExamRow[]
+    courseReady?: boolean
+    course_name?: string
+    message?: string
+  }>('/api/exam/student/exams')
 }
 
 export async function studentAttempts() {

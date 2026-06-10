@@ -86,9 +86,13 @@ function ExamInner() {
         setError('You have used all attempts for this exam.')
       }
     } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        router.replace('/dashboard/')
+        return
+      }
       setError(err instanceof ApiError ? err.message : 'Could not load exam.')
     }
-  }, [examId, beginSession])
+  }, [examId, beginSession, router])
 
   useEffect(() => {
     void load()

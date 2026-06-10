@@ -24,12 +24,16 @@ export default function DashboardPage() {
   const [course, setCourse] = useState('')
   const [exams, setExams] = useState<ExamRow[]>([])
   const [attempts, setAttempts] = useState<AttemptRow[]>([])
+  const [courseReady, setCourseReady] = useState(true)
+  const [courseMessage, setCourseMessage] = useState('')
 
   useEffect(() => {
     Promise.all([studentMe(), studentExams(), studentAttempts()])
       .then(([me, ex, at]) => {
         setName(me.name)
-        setCourse(me.course_name)
+        setCourse(ex.course_name || me.course_name)
+        setCourseReady(ex.courseReady !== false)
+        setCourseMessage(ex.message || '')
         setExams(ex.exams)
         setAttempts(at.attempts)
       })
@@ -78,7 +82,11 @@ export default function DashboardPage() {
         <section className="mt-6 sm:mt-8">
           <h2 className="text-sm font-semibold tracking-wide text-primary uppercase">Available exams</h2>
           <div className="mt-3 space-y-3">
-            {exams.length === 0 ? (
+            {!courseReady ? (
+              <p className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground sm:p-8">
+                {courseMessage || 'Your course is not set up for exams. Contact your training partner.'}
+              </p>
+            ) : exams.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground sm:p-8">
                 No published exams for your course yet.
               </p>

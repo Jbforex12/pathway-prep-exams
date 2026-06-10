@@ -20,6 +20,7 @@ function ResultInner() {
       .then(setResult)
       .catch((err) => {
         if (err instanceof ApiError && err.status === 401) router.replace('/')
+        if (err instanceof ApiError && err.status === 403) router.replace('/dashboard/')
       })
       .finally(() => setLoading(false))
   }, [attemptId, router])
